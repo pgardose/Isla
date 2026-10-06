@@ -1,0 +1,5 @@
+target/
+.superpowers/
+out/
+*.class
+db.properties

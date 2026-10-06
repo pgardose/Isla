@@ -1,0 +1,5 @@
+# Copy this file to "db.properties" (next to pom.xml) and fill in your MySQL details.
+# Create the database first:  CREATE DATABASE isla CHARACTER SET utf8mb4;
+url=jdbc:mysql://localhost:3306/isla
+user=root
+password=
