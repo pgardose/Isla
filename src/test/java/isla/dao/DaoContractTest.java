@@ -2,6 +2,7 @@ package isla.dao;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import isla.DebugQuest;
 import isla.Item;
 import isla.Player;
 import isla.Quest;
@@ -193,5 +194,57 @@ abstract class DaoContractTest {
         quests.save(new Quest(5, 2, "Say hello", 3, null));
         assertNull(quests.findById(5).orElseThrow().getRequiredItemName());
         assertEquals(List.of(5), quests.findAll().stream().map(Quest::getId).toList());
+    }
+
+    @Test
+    void debugQuest_roundTripsAsDebugQuest() {
+        quests.save(SeedData.debugQuest());
+        Quest loaded = quests.findById(2).orElseThrow();
+        DebugQuest dq = assertInstanceOf(DebugQuest.class, loaded);
+        DebugQuest expected = SeedData.debugQuest();
+        assertEquals(expected.getSnippet(), dq.getSnippet());
+        assertEquals(expected.getOptions(), dq.getOptions()); // same order
+        assertEquals(expected.getCorrectIndex(), dq.getCorrectIndex());
+        assertEquals(expected.getReward(), dq.getReward());
+        assertEquals(expected.getGiverNpcId(), dq.getGiverNpcId());
+        assertNull(dq.getRequiredItemName());
+        assertFalse(dq.isCompleted());
+    }
+
+    @Test
+    void debugQuest_completionPersists() {
+        DebugQuest q = SeedData.debugQuest();
+        quests.save(q);
+        q.markCompleted();
+        quests.save(q);
+        assertTrue(quests.findById(2).orElseThrow().isCompleted());
+    }
+
+    @Test
+    void debugQuest_resaveReplacesOptions_noStaleRows() {
+        quests.save(SeedData.debugQuest());
+        quests.save(new DebugQuest(2, 2, "Shorter", 10, "x = 1",
+                List.of("yes", "no"), 1));
+        DebugQuest dq = assertInstanceOf(DebugQuest.class, quests.findById(2).orElseThrow());
+        assertEquals(List.of("yes", "no"), dq.getOptions());
+        assertEquals(1, dq.getCorrectIndex());
+    }
+
+    @Test
+    void fetchAndDebugQuests_coexist_eachWithItsOwnType() {
+        quests.save(SeedData.elderQuest());
+        quests.save(SeedData.debugQuest());
+        List<Quest> all = quests.findAll();
+        assertEquals(List.of(1, 2), all.stream().map(Quest::getId).toList());
+        assertFalse(all.get(0) instanceof DebugQuest);
+        assertInstanceOf(DebugQuest.class, all.get(1));
+    }
+
+    @Test
+    void debugQuest_delete_removesIt() {
+        quests.save(SeedData.debugQuest());
+        quests.delete(2);
+        assertTrue(quests.findById(2).isEmpty());
+        assertTrue(quests.findAll().isEmpty());
     }
 }

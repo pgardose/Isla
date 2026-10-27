@@ -1,5 +1,6 @@
 package isla.dao;
 
+import isla.DebugQuest;
 import isla.Quest;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,15 +9,22 @@ import java.util.TreeMap;
 
 public class InMemoryQuestDAO implements QuestDAO {
 
-    private record Row(int giverNpcId, String description, int reward, String requiredItem, boolean completed) {
+    /** The extra fields only a DebugQuest has. */
+    private record Puzzle(String snippet, List<String> options, int correctIndex) {
+    }
+
+    private record Row(int giverNpcId, String description, int reward, String requiredItem, boolean completed,
+                       Puzzle puzzle) {
     }
 
     private final TreeMap<Integer, Row> store = new TreeMap<>();
 
     @Override
     public void save(Quest q) {
+        Puzzle puzzle = q instanceof DebugQuest dq
+                ? new Puzzle(dq.getSnippet(), dq.getOptions(), dq.getCorrectIndex()) : null;
         store.put(q.getId(), new Row(q.getGiverNpcId(), q.getDescription(), q.getReward(),
-                q.getRequiredItemName(), q.isCompleted()));
+                q.getRequiredItemName(), q.isCompleted(), puzzle));
     }
 
     @Override
@@ -37,7 +45,10 @@ public class InMemoryQuestDAO implements QuestDAO {
     }
 
     private Quest rebuild(int id, Row row) {
-        Quest q = new Quest(id, row.giverNpcId(), row.description(), row.reward(), row.requiredItem());
+        Quest q = row.puzzle() == null
+                ? new Quest(id, row.giverNpcId(), row.description(), row.reward(), row.requiredItem())
+                : new DebugQuest(id, row.giverNpcId(), row.description(), row.reward(),
+                        row.puzzle().snippet(), row.puzzle().options(), row.puzzle().correctIndex());
         if (row.completed()) {
             q.markCompleted();
         }

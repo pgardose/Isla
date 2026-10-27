@@ -64,3 +64,20 @@ CREATE TABLE IF NOT EXISTS quests (
     is_completed   BOOLEAN       NOT NULL DEFAULT FALSE,
     required_item  VARCHAR(80)   NULL
 ) ENGINE=InnoDB;
+
+-- Milestone 4: extra data for debug puzzles. Separate tables (not new columns on
+-- quests) so databases created before this milestone pick them up automatically.
+CREATE TABLE IF NOT EXISTS debug_quests (
+    quest_id       INT           NOT NULL PRIMARY KEY,
+    snippet        VARCHAR(500)  NOT NULL,
+    correct_index  INT           NOT NULL,
+    FOREIGN KEY (quest_id) REFERENCES quests (quest_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS quest_options (
+    quest_id       INT           NOT NULL,
+    option_index   INT           NOT NULL,
+    option_text    VARCHAR(255)  NOT NULL,
+    PRIMARY KEY (quest_id, option_index),
+    FOREIGN KEY (quest_id) REFERENCES debug_quests (quest_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
