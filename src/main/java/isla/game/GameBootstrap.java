@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Starts and saves games. On first run (empty storage) it seeds the item
- * catalog, vendors and quest from SeedData; afterwards it loads the saved
+ * catalog, vendors and quests from SeedData; afterwards it loads the saved
  * player and the live shop stock and quest state.
  */
 public final class GameBootstrap {
@@ -32,10 +32,12 @@ public final class GameBootstrap {
         seed(repos, newGame);
 
         Player player = repos.players().findById(SeedData.PLAYER_ID).orElseGet(GameBootstrap::newPlayer);
-        Quest quest = repos.quests().findById(SeedData.elderQuest().getId()).orElseGet(SeedData::elderQuest);
+        Quest elderQuest = repos.quests().findById(SeedData.elderQuest().getId()).orElseGet(SeedData::elderQuest);
+        Quest debugQuest = repos.quests().findById(SeedData.debugQuest().getId()).orElseGet(SeedData::debugQuest);
 
         List<NPC> npcs = new ArrayList<>(repos.vendors().findAll());
-        npcs.add(SeedData.elder(quest));
+        npcs.add(SeedData.elder(elderQuest));
+        npcs.add(SeedData.coder(debugQuest));
 
         GameSession session = new GameSession(new GameWorld(TileMap.loadResource(MAP_RESOURCE), player, npcs));
         session.setSaveHandler(() -> {
@@ -43,6 +45,16 @@ public final class GameBootstrap {
             return repos.isPersistent() ? "Game saved." : "Game saved for this session only (no database).";
         });
         return session;
+    }
+
+    /** True when a player has been saved, i.e. there is something to continue. */
+    public static boolean hasSave(Repositories repos) {
+        return repos.players().findById(SeedData.PLAYER_ID).isPresent();
+    }
+
+    /** Throws away all saved progress and resets shops and quests to their starting state. */
+    public static void erase(Repositories repos) {
+        seed(repos, true);
     }
 
     /** Writes the player, every vendor's stock and the quest state to storage. */
@@ -78,8 +90,11 @@ public final class GameBootstrap {
                 repos.vendors().save(vendor);
             }
         }
-        if (overwrite || repos.quests().findById(SeedData.elderQuest().getId()).isEmpty()) {
-            repos.quests().save(SeedData.elderQuest());
+        // Each quest is seeded on its own, so a save made before a quest existed still gains it.
+        for (Quest quest : List.of(SeedData.elderQuest(), SeedData.debugQuest())) {
+            if (overwrite || repos.quests().findById(quest.getId()).isEmpty()) {
+                repos.quests().save(quest);
+            }
         }
     }
 }

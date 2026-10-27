@@ -1,6 +1,7 @@
 package isla.game;
 
 import isla.Consumable;
+import isla.DebugQuest;
 import isla.Item;
 import isla.Quest;
 import isla.QuestGiver;
@@ -81,5 +82,25 @@ public final class SeedData {
     public static QuestGiver elder(Quest quest) {
         return new QuestGiver(1, 20, 9, "elder_sprite",
                 "Could you bring me a coconut? My legs are not what they were.", quest);
+    }
+
+    /** Nia's debugging puzzle. The correct fix is deliberately not the first option. */
+    public static DebugQuest debugQuest() {
+        return new DebugQuest(2, 2, "Fix Nia's broken stamina check", 40,
+                "if (stamina = 0) { rest(); }",
+                List.of("Change = to !=",
+                        "Change = to ==",
+                        "Remove the semicolon",
+                        "Rename stamina to energy"),
+                1);
+    }
+
+    public static QuestGiver coder() {
+        return coder(debugQuest());
+    }
+
+    public static QuestGiver coder(Quest quest) {
+        return new QuestGiver(2, 24, 14, "coder_sprite",
+                "My stamina check never works and I cannot see why. Can you debug it?", quest);
     }
 }

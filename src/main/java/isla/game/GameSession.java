@@ -1,5 +1,6 @@
 package isla.game;
 
+import isla.DebugQuest;
 import isla.InteractionResult;
 import isla.Item;
 import isla.ItemCategory;
@@ -45,6 +46,8 @@ public class GameSession {
     private String dialogueText = "";
     private Shop activeShop;
     private int shopCursor;
+    private DebugQuest activePuzzle;
+    private int puzzleCursor;
     private ItemCategory inventoryTab = ItemCategory.CONSUMABLE;
     private int inventoryCursor;
     private Supplier<String> saveHandler = () -> "Saving is not available.";
@@ -73,6 +76,15 @@ public class GameSession {
     /** The NPC's line currently shown in the dialogue box (dialogue and shop screens). */
     public String getDialogueText() {
         return dialogueText;
+    }
+
+    /** The puzzle on screen; non-null only while the DEBUG_PUZZLE screen is open. */
+    public DebugQuest getActivePuzzle() {
+        return activePuzzle;
+    }
+
+    public int getPuzzleCursor() {
+        return puzzleCursor;
     }
 
     public Shop getActiveShop() {
@@ -119,6 +131,7 @@ public class GameSession {
             case DIALOGUE -> handleDialogue(action);
             case SHOP -> handleShop(action);
             case INVENTORY -> handleInventory(action);
+            case DEBUG_PUZZLE -> handlePuzzle(action);
         }
     }
 
@@ -151,12 +164,18 @@ public class GameSession {
         }
         InteractionResult result = npc.interact(getPlayer());
         dialogueText = result.getText();
-        if (result.getKind() == InteractionResult.Kind.SHOP) {
-            activeShop = result.getShop();
-            shopCursor = 0;
-            screen = Screen.SHOP;
-        } else {
-            screen = Screen.DIALOGUE;
+        switch (result.getKind()) {
+            case SHOP -> {
+                activeShop = result.getShop();
+                shopCursor = 0;
+                screen = Screen.SHOP;
+            }
+            case PUZZLE -> {
+                activePuzzle = result.getPuzzle();
+                puzzleCursor = 0;
+                screen = Screen.DEBUG_PUZZLE;
+            }
+            default -> screen = Screen.DIALOGUE;
         }
     }
 
@@ -209,6 +228,35 @@ public class GameSession {
         if (shopCursor >= remaining) {
             shopCursor = Math.max(0, remaining - 1);
         }
+    }
+
+    // ---- debug puzzle ----
+
+    private void handlePuzzle(Action action) {
+        int n = activePuzzle.getOptions().size();
+        switch (action) {
+            case UP -> puzzleCursor = (puzzleCursor - 1 + n) % n;
+            case DOWN -> puzzleCursor = (puzzleCursor + 1) % n;
+            case CONFIRM -> submitPuzzleAnswer();
+            case CANCEL -> closePuzzle();
+            default -> { }
+        }
+    }
+
+    private void submitPuzzleAnswer() {
+        DebugQuest puzzle = activePuzzle;
+        if (puzzle.answer(getPlayer(), puzzleCursor)) {
+            dialogueText = "That fixed it! Here is $" + puzzle.getReward() + " for your trouble.";
+            closePuzzle();
+            screen = Screen.DIALOGUE;
+        } else {
+            message = "Not quite. Read the line again and try another fix.";
+        }
+    }
+
+    private void closePuzzle() {
+        activePuzzle = null;
+        screen = Screen.EXPLORING;
     }
 
     // ---- save ----
@@ -304,6 +352,7 @@ public class GameSession {
             case DIALOGUE -> renderDialogueBox(r, wrap(dialogueText, WRAP_CHARS), "Z: close");
             case SHOP -> renderShop(r);
             case INVENTORY -> renderInventory(r);
+            case DEBUG_PUZZLE -> renderPuzzle(r);
         }
     }
 
@@ -339,6 +388,26 @@ public class GameSession {
         }
         String text = message.isEmpty() ? dialogueText : message;
         renderDialogueBox(r, wrap(text, WRAP_CHARS), "Z: buy   X: leave");
+    }
+
+    private void renderPuzzle(Renderer r) {
+        r.fillRect(20, 12, 440, 182, BORDER);
+        r.fillRect(22, 14, 436, 178, PAPER);
+        r.drawText(30, 30, "DEBUG: pick the fix", INK);
+        r.drawText(396, 30, "$" + activePuzzle.getReward(), MONEY_INK);
+
+        r.fillRect(30, 40, 420, 26, INK);
+        r.drawText(40, 57, activePuzzle.getSnippet(), GOLD);
+
+        List<String> options = activePuzzle.getOptions();
+        for (int i = 0; i < options.size(); i++) {
+            int ry = 82 + i * 22;
+            r.fillRect(30, ry - 12, 420, 18, i == puzzleCursor ? GOLD : BORDER);
+            r.fillRect(32, ry - 10, 416, 14, i == puzzleCursor ? CARD : PAPER);
+            r.drawText(40, ry, (char) ('A' + i) + ".  " + options.get(i), INK);
+        }
+        String text = message.isEmpty() ? dialogueText : message;
+        renderDialogueBox(r, wrap(text, WRAP_CHARS), "Z: submit   X: leave");
     }
 
     private void renderInventory(Renderer r) {

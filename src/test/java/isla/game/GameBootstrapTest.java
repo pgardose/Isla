@@ -2,6 +2,7 @@ package isla.game;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import isla.DebugQuest;
 import isla.Item;
 import isla.NPC;
 import isla.Player;
@@ -39,6 +40,12 @@ class GameBootstrapTest {
                 .map(n -> (QuestGiver) n).findFirst().orElseThrow();
     }
 
+    private QuestGiver nia(GameSession s) {
+        return s.getWorld().getNpcs().stream()
+                .filter(n -> n instanceof QuestGiver g && g.getQuest() instanceof DebugQuest)
+                .map(n -> (QuestGiver) n).findFirst().orElseThrow();
+    }
+
     @Test
     void noSave_startsNewGame_withSeedStateAndSpawn() {
         GameSession s = GameBootstrap.start(repos, false);
@@ -49,7 +56,8 @@ class GameBootstrapTest {
         assertEquals(SeedData.SPAWN_Y, p.getY());
         assertEquals(0, p.getInventory().size());
         assertTrue(p.getUnlockedAreas().isEmpty());
-        assertEquals(4, s.getWorld().getNpcs().size());
+        assertEquals(5, s.getWorld().getNpcs().size());
+        assertFalse(nia(s).getQuest().isCompleted());
         assertFalse(elder(s).getQuest().isCompleted());
         assertEquals(5, mara(s).getShop().quantityOf(item("Coconut Water")));
     }
@@ -129,5 +137,90 @@ class GameBootstrapTest {
         assertFalse(Repositories.inMemory().isPersistent());
         NPC any = GameBootstrap.start(repos, false).getWorld().getNpcs().get(0);
         assertNotNull(any);
+    }
+
+    @Test
+    void solvedPuzzle_survivesSaveAndContinue_andPaysOnlyOnce() {
+        GameSession s = GameBootstrap.start(repos, false);
+        s.getPlayer().setPosition(24, 13);
+        s.handle(Action.CONFIRM);
+        assertEquals(Screen.DEBUG_PUZZLE, s.getScreen());
+        while (s.getPuzzleCursor() != s.getActivePuzzle().getCorrectIndex()) {
+            s.handle(Action.DOWN);
+        }
+        s.handle(Action.CONFIRM);
+        assertEquals(90, s.getPlayer().getMoney());
+        s.handle(Action.CONFIRM);
+        s.handle(Action.SAVE);
+
+        GameSession loaded = GameBootstrap.start(repos, false);
+        assertTrue(nia(loaded).getQuest().isCompleted());
+        assertEquals(90, loaded.getPlayer().getMoney());
+        loaded.handle(Action.CONFIRM);
+        assertEquals(Screen.DIALOGUE, loaded.getScreen());
+        assertEquals(90, loaded.getPlayer().getMoney());
+    }
+
+    @Test
+    void unsolvedPuzzle_isStillOpenAfterContinue() {
+        GameSession s = GameBootstrap.start(repos, false);
+        s.handle(Action.SAVE);
+        GameSession loaded = GameBootstrap.start(repos, false);
+        assertFalse(nia(loaded).getQuest().isCompleted());
+    }
+
+    @Test
+    void saveFromBeforeMilestone4_gainsNiaOnContinue() {
+        // Storage that was seeded when only the Elder's quest existed.
+        for (Item item : SeedData.items()) repos.items().save(item);
+        for (Vendor v : SeedData.vendors()) repos.vendors().save(v);
+        repos.quests().save(SeedData.elderQuest());
+        assertTrue(repos.quests().findById(2).isEmpty());
+
+        GameSession s = GameBootstrap.start(repos, false);
+        assertEquals(5, s.getWorld().getNpcs().size());
+        assertFalse(nia(s).getQuest().isCompleted());
+        assertTrue(repos.quests().findById(2).isPresent());
+    }
+
+    @Test
+    void newGameFlag_reopensSolvedPuzzle() {
+        GameSession s = GameBootstrap.start(repos, false);
+        nia(s).getQuest().markCompleted();
+        s.handle(Action.SAVE);
+        GameSession fresh = GameBootstrap.start(repos, true);
+        assertFalse(nia(fresh).getQuest().isCompleted());
+    }
+
+    @Test
+    void hasSave_falseOnEmptyStorage_trueOnceSaved() {
+        assertFalse(GameBootstrap.hasSave(repos));
+        GameSession s = GameBootstrap.start(repos, false);
+        assertFalse(GameBootstrap.hasSave(repos)); // starting is not saving
+        s.handle(Action.SAVE);
+        assertTrue(GameBootstrap.hasSave(repos));
+    }
+
+    @Test
+    void erase_removesSave_andNextStartIsAFreshGame() {
+        GameSession s = GameBootstrap.start(repos, false);
+        s.getPlayer().earn(100);
+        nia(s).getQuest().markCompleted();
+        s.handle(Action.SAVE);
+        assertTrue(GameBootstrap.hasSave(repos));
+
+        GameBootstrap.erase(repos);
+
+        assertFalse(GameBootstrap.hasSave(repos));
+        GameSession fresh = GameBootstrap.start(repos, false);
+        assertEquals(50, fresh.getPlayer().getMoney());
+        assertFalse(nia(fresh).getQuest().isCompleted());
+    }
+
+    @Test
+    void erase_onEmptyStorage_isHarmless() {
+        GameBootstrap.erase(repos);
+        assertFalse(GameBootstrap.hasSave(repos));
+        assertEquals(50, GameBootstrap.start(repos, false).getPlayer().getMoney());
     }
 }

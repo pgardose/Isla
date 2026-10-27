@@ -18,10 +18,12 @@ class IslandReachabilityTest {
     private final TileMap map = TileMap.loadResource("/maps/island.txt");
     private final List<Vendor> vendors = SeedData.vendors();
     private final QuestGiver elder = SeedData.elder();
+    private final QuestGiver coder = SeedData.coder();
 
     private List<NPC> allNpcs() {
         List<NPC> all = new ArrayList<>(vendors);
         all.add(elder);
+        all.add(coder);
         return all;
     }
 

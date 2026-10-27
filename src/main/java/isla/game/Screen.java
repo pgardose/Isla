@@ -5,5 +5,6 @@ public enum Screen {
     EXPLORING,
     DIALOGUE,
     SHOP,
-    INVENTORY
+    INVENTORY,
+    DEBUG_PUZZLE
 }
