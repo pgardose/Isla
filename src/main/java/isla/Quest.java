@@ -74,4 +74,20 @@ public class Quest {
         completed = true;
         return true;
     }
+
+    /**
+     * What happens when the player talks to the giver of this quest.
+     * OOP note (POLYMORPHISM): a fetch quest turns itself in or repeats the
+     * request; DebugQuest overrides this to open a puzzle instead.
+     */
+    public InteractionResult interact(Player player, String giverDialogue) {
+        if (completed) {
+            return InteractionResult.dialogue("Thanks again for your help!");
+        }
+        if (complete(player)) {
+            return InteractionResult.dialogue("You brought the " + requiredItemName
+                    + "! Here is $" + reward + " for your trouble.");
+        }
+        return InteractionResult.dialogue(giverDialogue + " (Quest: " + description + ")");
+    }
 }

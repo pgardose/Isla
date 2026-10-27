@@ -1,8 +1,8 @@
 package isla;
 
 /**
- * An NPC that hands out a fetch Quest. Interacting either turns the quest in
- * (if the player has what is asked for) or repeats the request.
+ * An NPC that hands out a Quest. What interacting does depends on the kind of
+ * quest: a fetch quest is turned in or repeated, a DebugQuest opens a puzzle.
  */
 public class QuestGiver extends NPC implements Interactable {
 
@@ -25,14 +25,7 @@ public class QuestGiver extends NPC implements Interactable {
 
     @Override
     public InteractionResult interact(Player player) {
-        if (quest.isCompleted()) {
-            return InteractionResult.dialogue("Thanks again for your help!");
-        }
-        if (quest.complete(player)) {
-            return InteractionResult.dialogue("You brought the " + quest.getRequiredItemName()
-                    + "! Here is $" + quest.getReward() + " for your trouble.");
-        }
-        return InteractionResult.dialogue(dialogue + " (Quest: " + quest.getDescription() + ")");
+        return quest.interact(player, dialogue);
     }
 
     @Override
