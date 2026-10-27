@@ -3,3 +3,5 @@ target/
 out/
 *.class
 db.properties
+settings.properties
+isla-data/

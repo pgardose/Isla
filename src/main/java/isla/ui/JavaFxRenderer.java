@@ -20,7 +20,8 @@ final class JavaFxRenderer implements Renderer {
             "player_sprite", "#E74C3C",
             "vendor_sprite", "#F39C12",
             "trader_sprite", "#8E44AD",
-            "elder_sprite", "#ECF0F1");
+            "elder_sprite", "#ECF0F1",
+            "coder_sprite", "#1ABC9C");
 
     private final GraphicsContext gc;
     private int camCol;
