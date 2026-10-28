@@ -32,6 +32,7 @@ public class IslaApp extends Application {
     private final Deque<Action> heldDirections = new ArrayDeque<>();
     private final Set<KeyCode> pressedKeys = new HashSet<>();
     private long lastRepeat;
+    private long frame;
     private Storage storage;
 
     public static void main(String[] args) {
@@ -91,7 +92,7 @@ public class IslaApp extends Application {
                     lastRepeat = now;
                     flow.handle(heldDirections.peekLast());
                 }
-                flow.render(renderer);
+                flow.render(renderer, frame++);
                 if (flow.isQuitRequested()) {
                     Platform.exit();
                 }

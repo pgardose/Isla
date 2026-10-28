@@ -34,11 +34,9 @@ public class AppFlow {
     private static final int SETTINGS_ENTRIES = 3; // autosave, erase, back
     private static final int SETTINGS_AUTOSAVE = 0;
     private static final int SETTINGS_ERASE = 1;
+    private static final String GLASS_ALPHA = "E0"; // 88% opaque: readable text, scene still visible
     private static final int NO = 0;
     private static final int YES = 1;
-
-    private static final String WATER = "#2E86C1";
-    private static final String SAND = "#F2D49B";
 
     private final Repositories repos;
     private final Settings settings;
@@ -300,11 +298,19 @@ public class AppFlow {
     // ---- drawing ----
 
     public void render(Renderer r) {
+        render(r, 0);
+    }
+
+    /**
+     * Draws the current screen. frame is a counter that goes up by one per
+     * displayed frame; menu backgrounds use it to animate, the game itself ignores it.
+     */
+    public void render(Renderer r, long frame) {
         if (mode == Mode.PLAYING) {
             session.render(r);
             return;
         }
-        drawBackdrop(r);
+        drawBackdrop(r, frame);
         switch (mode) {
             case MENU -> renderMenu(r);
             case HELP -> renderHelp(r);
@@ -321,9 +327,8 @@ public class AppFlow {
         }
     }
 
-    private void drawBackdrop(Renderer r) {
-        r.fillRect(0, 0, GameSession.SCREEN_WIDTH, GameSession.SCREEN_HEIGHT, WATER);
-        r.fillRect(0, 150, GameSession.SCREEN_WIDTH, GameSession.SCREEN_HEIGHT - 150, SAND);
+    private void drawBackdrop(Renderer r, long frame) {
+        TitleScene.draw(r, frame);
     }
 
     private void panel(Renderer r, int x, int y, int w, int h) {
@@ -331,16 +336,20 @@ public class AppFlow {
         r.fillRect(x + 2, y + 2, w - 4, h - 4, GameSession.PAPER);
     }
 
+    /** Like panel(), but the paper is slightly see-through ("#RRGGBBAA") so the title scene glows behind it. */
+    private void glassPanel(Renderer r, int x, int y, int w, int h) {
+        r.fillRect(x, y, w, h, GameSession.BORDER);
+        r.fillRect(x + 2, y + 2, w - 4, h - 4, GameSession.PAPER + GLASS_ALPHA);
+    }
+
     private static String cursorLabel(boolean selected, String text) {
         return (selected ? "> " : "  ") + text;
     }
 
     private void renderMenu(Renderer r) {
-        panel(r, 120, 18, 240, 62);
-        r.drawText(222, 46, "ISLA", GameSession.INK);
-        r.drawText(150, 66, "A 2D Island Trading Adventure", GameSession.INK);
+        TitleScene.drawLogo(r);
 
-        panel(r, 140, 88, 200, 122);
+        glassPanel(r, 140, 88, 200, 122);
         boolean canContinue = isContinueAvailable();
         for (int i = 0; i < MENU_ITEMS.size(); i++) {
             MenuItem item = MENU_ITEMS.get(i);
@@ -352,6 +361,7 @@ public class AppFlow {
             r.drawText(156, 118 + i * 20, cursorLabel(i == menuCursor, label),
                     unavailable ? GameSession.BORDER : GameSession.INK);
         }
+        glassPanel(r, 140, 214, 200, 20);
         r.drawText(150, 228, "Up/Down: choose    Z: select", GameSession.INK);
     }
 
