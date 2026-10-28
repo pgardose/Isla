@@ -53,4 +53,13 @@ class SettingsTest {
     void loadingADirectory_fallsBackToDefault() {
         assertTrue(Settings.load(dir).isAutosave());
     }
+
+    @Test
+    void save_createsMissingFolders() throws IOException {
+        Path file = dir.resolve("fresh").resolve("deeper").resolve("settings.properties");
+        Settings s = new Settings();
+        s.setAutosave(false);
+        s.save(file);
+        assertFalse(Settings.load(file).isAutosave());
+    }
 }

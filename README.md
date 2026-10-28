@@ -76,13 +76,16 @@ mvn test -Disla.test.jdbcUrl=jdbc:mysql://localhost:3306/isla_test \
 ## How the game works
 
 - **Main menu:** *Continue* loads your save (greyed out when there is none), *New Game* starts over (and asks
-  "Overwrite your saved game?" first, defaulting to No), *Settings*, *Quit*.
+  "Overwrite your saved game?" first, defaulting to No), *How to Play* (goal and controls), *Settings*, *Quit*.
 - **Settings:** *Autosave on close* On/Off (remembered in `settings.properties`) and *Erase saved game* (asks first).
 
 - Start with $50, 100 stamina, 6 inventory slots. Walking costs 1 stamina per 10 steps; at 0 you must rest (R) or use a consumable.
 - Vendors (`!`) sell items with limited stock. Buying is blocked without enough money or with a full inventory (you are never charged for nothing).
 - **Elder Kai** (`?`) wants a Coconut (sold by Mara for $8) and pays $25 once.
-- **Coder Nia** (teal square, below the main road near the start) has broken code: `if (stamina = 0) { rest(); }`. Pick the fix from four options. A wrong pick costs nothing and you can retry; the right one pays $40 once.
+- **Coder Nia** (teal square, below the main road near the start) has a broken line of code. Pick the fix from four options. A wrong pick costs nothing and you can retry; the right one pays $40 once.
+  Every **new game draws a different puzzle** from a bank of 13 (never the one you had last time) with the answers shuffled; **Continue keeps your puzzle**.
+  Add your own in `DebugQuestBank.java` (one entry each).
+- The world is now **80x52**: the home island, a village island to the east (follow the road across the bridge) and a big island to the south (the bridge at the bottom of the home island).
 - The **Rusty Machete** (Tomas, $30) is a Tool: use it from the inventory to unlock the **Jungle Path**, which hides Yara's rare items.
 
 ## Architecture
@@ -99,7 +102,7 @@ isla.ui         JavaFX only: IslaApp, JavaFxRenderer, KeyBindings
 ```
 
 Only `isla.ui` imports JavaFX. Everything else draws through the small `Renderer` interface, so the whole game
-is unit-tested without a window (210 tests).
+is unit-tested without a window (243 tests).
 
 ### OOP pillars
 
@@ -206,11 +209,17 @@ tests (`DaoContractTest`).
 
 ## Editing the island
 
-`src/main/resources/maps/island.txt` is plain text, one character per tile:
+`src/main/resources/maps/island.txt` is plain text, one character per tile (80x52 now):
 `g` grass, `s` sand, `w` water (blocked), `p` path, `t` palm (blocked), `h` hut (blocked),
-`j` jungle (needs the Jungle Path). A test checks that every NPC stays reachable (the jungle trader only after unlocking).
+`j` jungle (needs the Jungle Path). Tests check that every tile you can walk on can be reached from the start
+(and that only Yara's jungle pocket needs the machete), so an accidental cut-off island fails the build.
+
+To regenerate or enlarge the world, edit and run `java tools/GenerateMap.java` (it grows `tools/island-40x26.txt`, the
+original island, keeping every original coordinate). Add NPCs in `SeedData` on tiles the generator leaves as grass or path.
 
 ## Project docs
+
+- `docs/PACKAGING.md`: how to build one runnable jar or a double-click app so anyone can play
 
 - `docs/superpowers/specs/2026-10-04-isla-design.md`: approved design
 - `docs/superpowers/plans/2026-10-04-isla-milestones-1-3.md`: implementation plan

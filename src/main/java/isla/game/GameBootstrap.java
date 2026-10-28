@@ -1,5 +1,6 @@
 package isla.game;
 
+import isla.DebugQuest;
 import isla.Item;
 import isla.NPC;
 import isla.Player;
@@ -11,6 +12,7 @@ import isla.world.GameWorld;
 import isla.world.TileMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Starts and saves games. On first run (empty storage) it seeds the item
@@ -29,7 +31,12 @@ public final class GameBootstrap {
      * discarded and the world is reset to its starting state.
      */
     public static GameSession start(Repositories repos, boolean newGame) {
-        seed(repos, newGame);
+        return start(repos, newGame, new Random());
+    }
+
+    /** Same, with a given source of luck (tests pass a fixed seed to pick Nia's puzzle). */
+    public static GameSession start(Repositories repos, boolean newGame, Random random) {
+        seed(repos, newGame, random);
 
         Player player = repos.players().findById(SeedData.PLAYER_ID).orElseGet(GameBootstrap::newPlayer);
         Quest elderQuest = repos.quests().findById(SeedData.elderQuest().getId()).orElseGet(SeedData::elderQuest);
@@ -54,7 +61,7 @@ public final class GameBootstrap {
 
     /** Throws away all saved progress and resets shops and quests to their starting state. */
     public static void erase(Repositories repos) {
-        seed(repos, true);
+        seed(repos, true, new Random());
     }
 
     /** Writes the player, every vendor's stock and the quest state to storage. */
@@ -76,7 +83,7 @@ public final class GameBootstrap {
         return p;
     }
 
-    private static void seed(Repositories repos, boolean overwrite) {
+    private static void seed(Repositories repos, boolean overwrite, Random random) {
         if (overwrite) {
             repos.players().delete(SeedData.PLAYER_ID);
         }
@@ -91,10 +98,16 @@ public final class GameBootstrap {
             }
         }
         // Each quest is seeded on its own, so a save made before a quest existed still gains it.
-        for (Quest quest : List.of(SeedData.elderQuest(), SeedData.debugQuest())) {
-            if (overwrite || repos.quests().findById(quest.getId()).isEmpty()) {
-                repos.quests().save(quest);
-            }
+        Quest elder = SeedData.elderQuest();
+        if (overwrite || repos.quests().findById(elder.getId()).isEmpty()) {
+            repos.quests().save(elder);
+        }
+        // Nia's puzzle is drawn at random, but never the same one the player had last time.
+        int puzzleId = SeedData.debugQuest().getId();
+        Quest existing = repos.quests().findById(puzzleId).orElse(null);
+        if (overwrite || existing == null) {
+            String previous = existing instanceof DebugQuest dq ? dq.getSnippet() : null;
+            repos.quests().save(DebugQuestBank.random(random, previous));
         }
     }
 }

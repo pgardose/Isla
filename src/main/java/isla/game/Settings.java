@@ -51,6 +51,10 @@ public class Settings {
     public void save(Path file) throws IOException {
         Properties props = new Properties();
         props.setProperty(AUTOSAVE_KEY, Boolean.toString(autosave));
+        Path folder = file.toAbsolutePath().getParent();
+        if (folder != null) {
+            Files.createDirectories(folder);
+        }
         try (OutputStream out = Files.newOutputStream(file)) {
             props.store(out, "Isla settings");
         }

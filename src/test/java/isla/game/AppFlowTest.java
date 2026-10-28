@@ -72,9 +72,51 @@ class AppFlowTest {
     }
 
     @Test
-    void menuHasFourEntriesInOrder() {
+    void menuHasFiveEntriesInOrder() {
         assertEquals(java.util.List.of(AppFlow.MenuItem.CONTINUE, AppFlow.MenuItem.NEW_GAME,
-                AppFlow.MenuItem.SETTINGS, AppFlow.MenuItem.QUIT), flow().menuItems());
+                AppFlow.MenuItem.HOW_TO_PLAY, AppFlow.MenuItem.SETTINGS, AppFlow.MenuItem.QUIT), flow().menuItems());
+    }
+
+    // ---- how to play ----
+
+    @Test
+    void howToPlay_opens_andBothConfirmAndCancelGoBackToTheMenu() {
+        AppFlow f = flow();
+        choose(f, AppFlow.MenuItem.HOW_TO_PLAY);
+        assertEquals(AppFlow.Mode.HELP, f.getMode());
+        f.handle(Action.CONFIRM);
+        assertEquals(AppFlow.Mode.MENU, f.getMode());
+        choose(f, AppFlow.MenuItem.HOW_TO_PLAY);
+        f.handle(Action.CANCEL);
+        assertEquals(AppFlow.Mode.MENU, f.getMode());
+    }
+
+    @Test
+    void howToPlay_arrowKeysDoNothing_andNothingStartsPlaying() {
+        AppFlow f = flow();
+        choose(f, AppFlow.MenuItem.HOW_TO_PLAY);
+        f.handle(Action.DOWN);
+        f.handle(Action.UP);
+        assertEquals(AppFlow.Mode.HELP, f.getMode());
+        assertNull(f.getSession());
+    }
+
+    @Test
+    void howToPlay_render_explainsTheGoalTheControlsAndTheMarkers() {
+        AppFlow f = flow();
+        choose(f, AppFlow.MenuItem.HOW_TO_PLAY);
+        RecordingRenderer r = new RecordingRenderer();
+        f.render(r);
+        for (String expected : new String[] {"HOW TO PLAY", "Goal", "Arrow keys", "Z", "X", "Esc", "Inventory", "Rest", "F5"}) {
+            assertTrue(r.anyTextContains(expected), "missing '" + expected + "' in " + r.texts);
+        }
+    }
+
+    @Test
+    void menuRender_listsHowToPlay() {
+        RecordingRenderer r = new RecordingRenderer();
+        flow().render(r);
+        assertTrue(r.anyTextContains("How to Play"), String.valueOf(r.texts));
     }
 
     @Test
@@ -206,8 +248,10 @@ class AppFlowTest {
     }
 
     @Test
-    void settings_failingToWriteTheFile_isReported_butTheToggleStillApplies() {
-        Path unwritable = dir.resolve("no-such-folder").resolve("settings.properties");
+    void settings_failingToWriteTheFile_isReported_butTheToggleStillApplies() throws java.io.IOException {
+        Path blocker = dir.resolve("a-file-not-a-folder");
+        java.nio.file.Files.writeString(blocker, "x");
+        Path unwritable = blocker.resolve("settings.properties"); // its "folder" is a regular file
         AppFlow f = new AppFlow(repos, new Settings(), unwritable);
         choose(f, AppFlow.MenuItem.SETTINGS);
         openSettingsEntry(f, 0);

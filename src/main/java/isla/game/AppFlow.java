@@ -14,10 +14,10 @@ import java.util.List;
  */
 public class AppFlow {
 
-    public enum Mode { MENU, SETTINGS, CONFIRM_NEW, CONFIRM_ERASE, PLAYING }
+    public enum Mode { MENU, HELP, SETTINGS, CONFIRM_NEW, CONFIRM_ERASE, PLAYING }
 
     public enum MenuItem {
-        CONTINUE("Continue"), NEW_GAME("New Game"), SETTINGS("Settings"), QUIT("Quit");
+        CONTINUE("Continue"), NEW_GAME("New Game"), HOW_TO_PLAY("How to Play"), SETTINGS("Settings"), QUIT("Quit");
 
         private final String label;
 
@@ -136,6 +136,7 @@ public class AppFlow {
         message = "";
         switch (mode) {
             case MENU -> handleMenu(action);
+            case HELP -> handleHelp(action);
             case SETTINGS -> handleSettings(action);
             case CONFIRM_NEW -> handleConfirm(action, this::confirmNewGame, Mode.MENU);
             case CONFIRM_ERASE -> handleConfirm(action, this::confirmErase, Mode.SETTINGS);
@@ -169,11 +170,18 @@ public class AppFlow {
                     startPlaying(true);
                 }
             }
+            case HOW_TO_PLAY -> mode = Mode.HELP;
             case SETTINGS -> {
                 settingsCursor = 0;
                 mode = Mode.SETTINGS;
             }
             case QUIT -> quitRequested = true;
+        }
+    }
+
+    private void handleHelp(Action action) {
+        if (action == Action.CONFIRM || action == Action.CANCEL) {
+            mode = Mode.MENU; // the cursor stays on "How to Play"
         }
     }
 
@@ -297,6 +305,7 @@ public class AppFlow {
         drawBackdrop(r);
         switch (mode) {
             case MENU -> renderMenu(r);
+            case HELP -> renderHelp(r);
             case SETTINGS -> renderSettings(r);
             case CONFIRM_NEW -> renderConfirm(r, "Overwrite your saved game?");
             case CONFIRM_ERASE -> renderConfirm(r, "Erase your saved game?");
@@ -329,7 +338,7 @@ public class AppFlow {
         r.drawText(222, 46, "ISLA", GameSession.INK);
         r.drawText(150, 66, "A 2D Island Trading Adventure", GameSession.INK);
 
-        panel(r, 140, 92, 200, 118);
+        panel(r, 140, 88, 200, 122);
         boolean canContinue = isContinueAvailable();
         for (int i = 0; i < MENU_ITEMS.size(); i++) {
             MenuItem item = MENU_ITEMS.get(i);
@@ -338,10 +347,32 @@ public class AppFlow {
             if (unavailable) {
                 label += " (no saved game)";
             }
-            r.drawText(156, 120 + i * 24, cursorLabel(i == menuCursor, label),
+            r.drawText(156, 118 + i * 20, cursorLabel(i == menuCursor, label),
                     unavailable ? GameSession.BORDER : GameSession.INK);
         }
         r.drawText(150, 228, "Up/Down: choose    Z: select", GameSession.INK);
+    }
+
+    private void renderHelp(Renderer r) {
+        panel(r, 30, 14, 420, 214);
+        String[] lines = {
+            "HOW TO PLAY",
+            "",
+            "Goal: earn money, shop wisely and help the islanders.",
+            "",
+            "Arrow keys or WASD ... walk",
+            "Z, Enter or Space ... talk, confirm, buy, use",
+            "X, Esc or Backspace ... cancel, or back to the menu",
+            "I ... Inventory          R ... Rest (+10 stamina)",
+            "F5 ... Save your game",
+            "",
+            "! marks a shop, ? marks someone who needs help.",
+            "Walking uses stamina: rest or eat to get it back.",
+        };
+        for (int i = 0; i < lines.length; i++) {
+            r.drawText(46, 38 + i * 15, lines[i], GameSession.INK);
+        }
+        r.drawText(46, 218, "Z or X: back", GameSession.INK);
     }
 
     private void renderSettings(Renderer r) {
