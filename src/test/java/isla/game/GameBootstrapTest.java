@@ -59,7 +59,7 @@ class GameBootstrapTest {
         assertEquals(SeedData.SPAWN_Y, p.getY());
         assertEquals(0, p.getInventory().size());
         assertTrue(p.getUnlockedAreas().isEmpty());
-        assertEquals(9, s.getWorld().getNpcs().size());
+        assertEquals(5, s.getWorld().getNpcs().size());
         assertFalse(nia(s).getQuest().isCompleted());
         assertFalse(elder(s).getQuest().isCompleted());
         assertEquals(5, mara(s).getShop().quantityOf(item("Coconut Water")));
@@ -181,7 +181,7 @@ class GameBootstrapTest {
         assertTrue(repos.quests().findById(2).isEmpty());
 
         GameSession s = GameBootstrap.start(repos, false);
-        assertEquals(9, s.getWorld().getNpcs().size());
+        assertEquals(5, s.getWorld().getNpcs().size());
         assertFalse(nia(s).getQuest().isCompleted());
         assertTrue(repos.quests().findById(2).isPresent());
     }

@@ -256,8 +256,10 @@ public class AppFlow {
     }
 
     private void handlePlaying(Action action) {
-        // Cancel only leaves when nothing is open; inside a shop or dialogue it closes that first.
-        if (action == Action.CANCEL && session.getScreen() == Screen.EXPLORING) {
+        // Cancel only leaves when nothing is open (or on the ending screen, whose "main menu" choice is Cancel);
+        // inside a shop, dialogue or the quest list it closes that first.
+        boolean canLeave = session.getScreen() == Screen.EXPLORING || session.getScreen() == Screen.ENDING;
+        if (action == Action.CANCEL && canLeave) {
             leaveIsland();
         } else {
             session.handle(action);
@@ -357,14 +359,14 @@ public class AppFlow {
         panel(r, 30, 14, 420, 214);
         String[] lines = {
             "HOW TO PLAY",
-            "",
-            "Goal: earn money, shop wisely and help the islanders.",
+            "Goal: help Elder Kai. A coconut first, then the Golden Idol",
+            "from Yara in the jungle. Press Q any time to see your quests.",
             "",
             "Arrow keys or WASD ... walk",
             "Z, Enter or Space ... talk, confirm, buy, use",
             "X, Esc or Backspace ... cancel, or back to the menu",
             "I ... Inventory          R ... Rest (+10 stamina)",
-            "F5 ... Save your game",
+            "Q ... Quest list         F5 ... Save your game",
             "",
             "! marks a shop, ? marks someone who needs help.",
             "Walking uses stamina: rest or eat to get it back.",

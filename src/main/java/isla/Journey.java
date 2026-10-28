@@ -49,7 +49,7 @@ public final class Journey {
     /** The first unfinished chapter the player can start right now (chapters can be done in any allowed order). */
     public Optional<Chapter> current() {
         return chapters.stream()
-                .filter(c -> !c.quest().isCompleted() && c.quest().isAvailable())
+                .filter(c -> !c.quest().isCompleted())
                 .findFirst();
     }
 

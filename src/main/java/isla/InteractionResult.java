@@ -7,7 +7,7 @@ package isla;
  */
 public final class InteractionResult {
 
-    public enum Kind { DIALOGUE, SHOP, PUZZLE }
+    public enum Kind { DIALOGUE, SHOP, PUZZLE, ENDING }
 
     private final Kind kind;
     private final String text;
@@ -31,6 +31,11 @@ public final class InteractionResult {
 
     public static InteractionResult puzzle(String intro, DebugQuest puzzle) {
         return new InteractionResult(Kind.PUZZLE, intro, null, puzzle);
+    }
+
+    /** The story is over: the game layer shows the ending screen. The text is the last thing the NPC said. */
+    public static InteractionResult ending(String text) {
+        return new InteractionResult(Kind.ENDING, text, null, null);
     }
 
     public Kind getKind() {

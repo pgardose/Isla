@@ -3,11 +3,12 @@ package isla.game;
 import isla.DebugQuest;
 import isla.InteractionResult;
 import isla.Item;
-import isla.Journey;
 import isla.ItemCategory;
 import isla.NPC;
 import isla.Player;
 import isla.PurchaseResult;
+import isla.Quest;
+import isla.QuestGiver;
 import isla.Renderer;
 import isla.Shop;
 import isla.world.GameWorld;
@@ -32,6 +33,10 @@ public class GameSession {
     public static final int SCREEN_WIDTH = VIEW_COLS * TILE_SIZE;   // 480
     public static final int SCREEN_HEIGHT = VIEW_ROWS * TILE_SIZE;  // 272
 
+    /** The closing story shown on the ending screen (wrapped to fit). */
+    static final String ENDING_STORY = "Elder Kai holds the Golden Idol up to the light and smiles. "
+            + "\"The island remembers its treasures again,\" he says. Thanks to you, Isla is at peace.";
+
     static final String INK = "#3A2A12";
     static final String PAPER = "#F6EBC8";
     static final String CARD = "#FFF8E1";
@@ -51,7 +56,6 @@ public class GameSession {
     private int puzzleCursor;
     private ItemCategory inventoryTab = ItemCategory.CONSUMABLE;
     private int inventoryCursor;
-    private Journey journey;
     private Supplier<String> saveHandler = () -> "Saving is not available.";
 
     public GameSession(GameWorld world) {
@@ -97,13 +101,39 @@ public class GameSession {
         return shopCursor;
     }
 
-    /** The main story shown in the HUD (null = no story, e.g. in small unit-test worlds). */
-    public Journey getJourney() {
-        return journey;
+    /**
+     * One goal line per quest giver, main quest (Elder Kai) first: the active goal such as "Bring Elder Kai a
+     * coconut", or "Done: ..." once that giver has nothing left to ask.
+     */
+    public List<String> questLines() {
+        List<String> lines = new ArrayList<>();
+        for (NPC npc : world.getNpcs()) {
+            if (npc instanceof QuestGiver giver) {
+                lines.add(giver.getGoal());
+            }
+        }
+        return lines;
     }
 
-    public void setJourney(Journey journey) {
-        this.journey = journey;
+    /** The lines shown on the ending screen. Worked out from the saved quests, so it is right after Continue too. */
+    public List<String> endingSummary() {
+        int total = 0;
+        int done = 0;
+        int earned = 0;
+        for (NPC npc : world.getNpcs()) {
+            if (npc instanceof QuestGiver giver) {
+                for (Quest q : giver.getQuests()) {
+                    total++;
+                    if (q.isCompleted()) {
+                        done++;
+                        earned += q.getReward();
+                    }
+                }
+            }
+        }
+        return List.of("Quests completed: " + done + " of " + total,
+                "Money earned from quests: $" + earned,
+                "Money in hand: $" + getPlayer().getMoney());
     }
 
     /** Sets what the SAVE action does; the handler returns the message to show. */
@@ -143,6 +173,8 @@ public class GameSession {
             case SHOP -> handleShop(action);
             case INVENTORY -> handleInventory(action);
             case DEBUG_PUZZLE -> handlePuzzle(action);
+            case QUESTS -> handleQuestList(action);
+            case ENDING -> handleEnding(action);
         }
     }
 
@@ -158,6 +190,7 @@ public class GameSession {
             case INVENTORY -> openInventory();
             case REST -> rest();
             case SAVE -> save();
+            case QUESTS -> screen = Screen.QUESTS;
             default -> { }
         }
     }
@@ -186,7 +219,26 @@ public class GameSession {
                 puzzleCursor = 0;
                 screen = Screen.DEBUG_PUZZLE;
             }
+            case ENDING -> screen = Screen.ENDING;
             default -> screen = Screen.DIALOGUE;
+        }
+    }
+
+    // ---- quest list and ending ----
+
+    private void handleQuestList(Action action) {
+        if (action == Action.CANCEL || action == Action.CONFIRM || action == Action.QUESTS) {
+            screen = Screen.EXPLORING;
+        }
+    }
+
+    /**
+     * Z keeps exploring. X (back to the main menu) is handled one level up by AppFlow, because leaving the
+     * island means saving and showing the menu, which a session knows nothing about.
+     */
+    private void handleEnding(Action action) {
+        if (action == Action.CONFIRM) {
+            screen = Screen.EXPLORING;
         }
     }
 
@@ -364,7 +416,38 @@ public class GameSession {
             case SHOP -> renderShop(r);
             case INVENTORY -> renderInventory(r);
             case DEBUG_PUZZLE -> renderPuzzle(r);
+            case QUESTS -> renderQuestList(r);
+            case ENDING -> renderEnding(r);
         }
+    }
+
+    private void renderQuestList(Renderer r) {
+        r.fillRect(20, 12, 440, 112, BORDER);
+        r.fillRect(22, 14, 436, 108, PAPER);
+        r.drawText(30, 32, "QUESTS", INK);
+        List<String> lines = questLines();
+        for (int i = 0; i < lines.size(); i++) {
+            String label = i == 0 ? "Goal: " : "Side: ";
+            r.drawText(30, 56 + i * 18, label + lines.get(i), INK);
+        }
+        r.drawText(30, 112, "Q or X: close", BORDER);
+    }
+
+    private void renderEnding(Renderer r) {
+        r.fillRect(20, 12, 440, 248, BORDER);
+        r.fillRect(22, 14, 436, 244, PAPER);
+        r.drawText(214, 36, "THE END", INK);
+        List<String> story = wrap(ENDING_STORY, 66);
+        for (int i = 0; i < story.size(); i++) {
+            r.drawText(34, 62 + i * 14, story.get(i), INK);
+        }
+        r.drawText(34, 132, "Your story", MONEY_INK);
+        List<String> summary = endingSummary();
+        for (int i = 0; i < summary.size(); i++) {
+            r.drawText(46, 152 + i * 16, summary.get(i), INK);
+        }
+        r.drawText(34, 224, "Z: keep exploring", INK);
+        r.drawText(34, 242, "X: back to the main menu (saves first)", INK);
     }
 
     private void renderHud(Renderer r) {
@@ -375,11 +458,6 @@ public class GameSession {
         r.fillRect(10, 34, 108, 8, "#3A3A3A");
         int filled = p.getMaxStamina() == 0 ? 0 : 108 * p.getStamina() / p.getMaxStamina();
         r.fillRect(10, 34, filled, 8, "#5BD16B");
-        if (journey != null) {
-            r.fillRect(128, 4, 348, 30, "#1E2A38");
-            r.drawText(134, 17, journey.getTitle() + "  " + journey.completedCount() + "/" + journey.size(), GOLD);
-            r.drawText(134, 29, journey.objectiveText(), "#FFFFFF");
-        }
     }
 
     private void renderShop(Renderer r) {

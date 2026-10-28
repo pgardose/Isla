@@ -20,6 +20,7 @@ final class KeyBindings {
             case X: case ESCAPE: case BACK_SPACE: return Action.CANCEL;
             case I: return Action.INVENTORY;
             case R: return Action.REST;
+            case Q: return Action.QUESTS;
             case F5: return Action.SAVE;
             default: return null;
         }

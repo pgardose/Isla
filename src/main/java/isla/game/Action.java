@@ -4,7 +4,7 @@ package isla.game;
 public enum Action {
     UP, DOWN, LEFT, RIGHT,
     CONFIRM, CANCEL,
-    INVENTORY, REST, SAVE;
+    INVENTORY, REST, SAVE, QUESTS;
 
     public boolean isDirection() {
         return this == UP || this == DOWN || this == LEFT || this == RIGHT;
