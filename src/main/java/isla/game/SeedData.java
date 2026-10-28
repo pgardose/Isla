@@ -101,6 +101,6 @@ public final class SeedData {
 
     public static QuestGiver coder(Quest quest) {
         return new QuestGiver(2, 24, 14, "coder_sprite",
-                "My stamina check never works and I cannot see why. Can you debug it?", quest);
+                "My code is broken and I cannot see why. Can you debug it?", quest);
     }
 }

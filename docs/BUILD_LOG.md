@@ -130,3 +130,31 @@ Saving used to need a MySQL server; without one the game ran from memory and cou
 2. **Data folder `isla-data/` in the working directory**, next to `db.properties`.
 3. **MySQL down falls back to the built-in database** (with a notice) instead of memory. Saves are not copied between the two.
 4. **One Isla window at a time** can use the built-in database (H2 locks the file); a second one falls back to memory with a notice.
+
+---
+
+# Expansion: bigger map, a different puzzle every game, easier to share
+
+Built test-first; tests went from 210 to 243.
+
+## What was built
+| Piece | Delivered |
+|---|---|
+| Different debug questions | `DebugQuestBank`: 13 puzzles, answers shuffled. Every new game draws one at random, never the same as the previous game; Continue keeps the saved one. `GameBootstrap.start(repos, newGame, Random)` takes the random source (tests use fixed seeds). Nia's intro line is now generic |
+| Bigger map | 80x52 world: home island unchanged, east village island and south island joined by bridges. Built by `tools/GenerateMap.java` from `tools/island-40x26.txt`. `BigIslandTest` checks size, amount of land and that all land is reachable |
+| Playable by anyone | *How to Play* screen on the main menu; `AppPaths` (files live in `~/.isla` unless run from the project folder, so double-clicking works anywhere); `Settings.save` creates missing folders; `isla.Launcher` main class for a runnable jar; `docs/PACKAGING.md` |
+
+## Verification evidence
+- 243 tests pass (H2 default). The overview of the whole map and in-game screenshots of the east island and the How to Play screen were checked by eye.
+- The real app was launched through `isla.Launcher` from an unrelated folder with a throwaway home directory: nothing was created in that folder and the database appeared in `~/.isla/isla-data`.
+
+## Not verified here (please check on your machine)
+- `docs/PACKAGING.md` (maven-shade, jpackage) was **not run**: no access to Maven Central. The shade plugin config is deliberately **not** in `pom.xml` so it cannot break your build; paste it in when you are ready to package.
+- Walking across the bridges with the real keyboard, and a Windows/macOS double-click launch.
+- Not done: typing a player name, or several separate players on one computer (one save per computer/folder for now). The new islands have no shops or NPCs yet, only roads, huts and palms.
+
+## Decisions made while building
+1. **Old coordinates are untouched** (the new land attaches to the east and south), so every NPC position and existing test still holds.
+2. **A new game never repeats the previous puzzle**, but a continued game keeps its puzzle so progress and question stay consistent.
+3. **Reward stays $40 for every puzzle** so earning stays predictable and the existing tests still hold.
+4. **Data location:** the project folder (when it has `pom.xml`, `isla-data`, `db.properties` or `settings.properties`), otherwise `~/.isla`.

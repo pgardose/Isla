@@ -11,6 +11,9 @@ import isla.Vendor;
 import isla.dao.Repositories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.util.Random;
+import java.util.Set;
+import java.util.HashSet;
 
 /** Save/continue behaviour. JdbcBootstrapTest runs the same tests on MySQL. */
 class GameBootstrapTest {
@@ -222,5 +225,69 @@ class GameBootstrapTest {
         GameBootstrap.erase(repos);
         assertFalse(GameBootstrap.hasSave(repos));
         assertEquals(50, GameBootstrap.start(repos, false).getPlayer().getMoney());
+    }
+
+    // ---- different debug question per game ----
+
+    private String snippetOf(GameSession s) {
+        return ((DebugQuest) nia(s).getQuest()).getSnippet();
+    }
+
+    @Test
+    void firstEverStart_drawsNiasPuzzleFromTheBank() {
+        GameSession s = GameBootstrap.start(repos, false, new Random(5));
+        assertTrue(DebugQuestBank.all().stream().anyMatch(p -> p.snippet().equals(snippetOf(s))));
+    }
+
+    @Test
+    void everyNewGame_getsADifferentPuzzleThanTheOneBefore_evenWithTheSameLuck() {
+        String previous = snippetOf(GameBootstrap.start(repos, true, new Random(7)));
+        for (int i = 0; i < 25; i++) {
+            String next = snippetOf(GameBootstrap.start(repos, true, new Random(7)));
+            assertNotEquals(previous, next, "game " + i);
+            previous = next;
+        }
+    }
+
+    @Test
+    void continuing_keepsTheSamePuzzleAndAnswerOrder() {
+        GameSession s = GameBootstrap.start(repos, true, new Random(11));
+        DebugQuest first = (DebugQuest) nia(s).getQuest();
+        s.handle(Action.SAVE);
+
+        GameSession loaded = GameBootstrap.start(repos, false, new Random(999));
+        DebugQuest again = (DebugQuest) nia(loaded).getQuest();
+        assertEquals(first.getSnippet(), again.getSnippet());
+        assertEquals(first.getOptions(), again.getOptions());
+        assertEquals(first.getCorrectIndex(), again.getCorrectIndex());
+    }
+
+    @Test
+    void differentPlayers_withTheirOwnStorage_canGetDifferentPuzzles() {
+        Set<String> seen = new HashSet<>();
+        for (long seed = 0; seed < 20; seed++) {
+            seen.add(snippetOf(GameBootstrap.start(isla.dao.Repositories.inMemory(), false, new Random(seed))));
+        }
+        assertTrue(seen.size() > 3, "only " + seen.size() + " different puzzles across 20 players");
+    }
+
+    @Test
+    void aSaveFromBeforeTheBank_keepsItsOwnPuzzle() {
+        // The original single puzzle is still in the bank and is left alone on continue.
+        for (Item item : SeedData.items()) repos.items().save(item);
+        for (Vendor v : SeedData.vendors()) repos.vendors().save(v);
+        repos.quests().save(SeedData.elderQuest());
+        repos.quests().save(SeedData.debugQuest());
+        GameSession s = GameBootstrap.start(repos, false, new Random(1));
+        assertEquals(SeedData.debugQuest().getSnippet(), snippetOf(s));
+    }
+
+    @Test
+    void niaTalksGenerically_soAnyPuzzleFits() {
+        GameSession s = GameBootstrap.start(repos, true, new Random(2));
+        s.getPlayer().setPosition(24, 13);
+        s.handle(Action.CONFIRM);
+        assertTrue(s.getDialogueText().contains("My code is broken"), s.getDialogueText());
+        assertFalse(s.getDialogueText().contains("stamina"), s.getDialogueText());
     }
 }

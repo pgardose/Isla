@@ -4,6 +4,7 @@ import isla.dao.Storage;
 import isla.dao.StorageOpener;
 import isla.game.Action;
 import isla.game.AppFlow;
+import isla.game.AppPaths;
 import isla.game.GameSession;
 import isla.game.Settings;
 import java.nio.file.Path;
@@ -40,8 +41,9 @@ public class IslaApp extends Application {
     @Override
     public void start(Stage stage) {
         // MySQL if db.properties points at a working server, else the built-in database in isla-data/.
-        storage = StorageOpener.open(Path.of("db.properties"), Path.of("isla-data"));
-        Path settingsFile = Path.of("settings.properties");
+        AppPaths paths = AppPaths.forThisComputer();
+        storage = StorageOpener.open(paths.dbProperties(), paths.dataFolder());
+        Path settingsFile = paths.settingsFile();
         flow = new AppFlow(storage.repos(), Settings.load(settingsFile), settingsFile);
         if (!storage.notice().isEmpty()) {
             System.err.println(storage.notice());
