@@ -144,7 +144,7 @@ abstract class DaoContractTest {
         assertEquals("Mara", loaded.getName());
         assertEquals(12, loaded.getX());
         assertEquals(12, loaded.getY());
-        assertEquals("vendor_sprite", loaded.getSprite());
+        assertEquals(mara.getSprite(), loaded.getSprite());
         assertEquals(mara.getDialogue(), loaded.getDialogue());
         assertEquals(4, loaded.getShop().quantityOf(item("Coconut Water")));
         assertEquals(3, loaded.getShop().quantityOf(item("Coconut")));

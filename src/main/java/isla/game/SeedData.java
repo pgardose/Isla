@@ -63,9 +63,9 @@ public final class SeedData {
         jungle.addStock(item(c, 6), 1);
 
         return List.of(
-                new Vendor(1, "Mara", 12, 12, "vendor_sprite",
+                new Vendor(1, "Mara", 12, 12, "mara_sprite",
                         "Fresh fruit! Fill up before you wander far.", fruit),
-                new Vendor(2, "Tomas", 28, 12, "vendor_sprite",
+                new Vendor(2, "Tomas", 28, 12, "tomas_sprite",
                         "Tools and trinkets, fair prices.", tools),
                 new Vendor(3, "Yara", 30, 7, "trader_sprite",
                         "You found the jungle! Rare things for sale.", jungle));

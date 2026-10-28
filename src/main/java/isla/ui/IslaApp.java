@@ -32,6 +32,7 @@ public class IslaApp extends Application {
     private final Deque<Action> heldDirections = new ArrayDeque<>();
     private final Set<KeyCode> pressedKeys = new HashSet<>();
     private long lastRepeat;
+    private long frame;
     private Storage storage;
 
     public static void main(String[] args) {
@@ -56,7 +57,7 @@ public class IslaApp extends Application {
         Canvas canvas = new Canvas(GameSession.SCREEN_WIDTH * SCALE, GameSession.SCREEN_HEIGHT * SCALE);
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.scale(SCALE, SCALE);
-        JavaFxRenderer renderer = new JavaFxRenderer(gc);
+        JavaFxRenderer renderer = new JavaFxRenderer(gc, SCALE);
 
         Scene scene = new Scene(new StackPane(canvas));
         scene.setOnKeyPressed(e -> {
@@ -91,7 +92,8 @@ public class IslaApp extends Application {
                     lastRepeat = now;
                     flow.handle(heldDirections.peekLast());
                 }
-                flow.render(renderer);
+                renderer.setFrame((int) frame); // water and walking animate from this counter
+                flow.render(renderer, frame++);
                 if (flow.isQuitRequested()) {
                     Platform.exit();
                 }
