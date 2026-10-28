@@ -2,9 +2,13 @@ package isla.dao;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -13,6 +17,20 @@ class StorageOpenerTest {
 
     @TempDir
     Path dir;
+
+    // The opener prints why it fell back (useful when playing); here that is expected, so keep the test log quiet.
+    private final PrintStream realErr = System.err;
+    private final ByteArrayOutputStream capturedErr = new ByteArrayOutputStream();
+
+    @BeforeEach
+    void captureErr() {
+        System.setErr(new PrintStream(capturedErr));
+    }
+
+    @AfterEach
+    void restoreErr() {
+        System.setErr(realErr);
+    }
 
     private Path props(String text) throws IOException {
         return Files.writeString(dir.resolve("db.properties"), text);
@@ -74,5 +92,12 @@ class StorageOpenerTest {
         Storage storage = StorageOpener.open(file, blocker);
         assertFalse(storage.repos().isPersistent());
         assertTrue(storage.notice().contains("will not be saved"), storage.notice());
+    }
+
+    @Test
+    void whyItFellBack_isStillPrintedForTheDeveloper() throws IOException {
+        Storage storage = StorageOpener.open(props("user=root\n"), dir.resolve("isla-data"));
+        assertTrue(capturedErr.toString().contains("MySQL unavailable"), capturedErr.toString());
+        storage.shutdown();
     }
 }

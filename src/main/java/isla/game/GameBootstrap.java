@@ -2,6 +2,7 @@ package isla.game;
 
 import isla.DebugQuest;
 import isla.Item;
+import isla.Journey;
 import isla.NPC;
 import isla.Player;
 import isla.Quest;
@@ -39,19 +40,37 @@ public final class GameBootstrap {
         seed(repos, newGame, random);
 
         Player player = repos.players().findById(SeedData.PLAYER_ID).orElseGet(GameBootstrap::newPlayer);
-        Quest elderQuest = repos.quests().findById(SeedData.elderQuest().getId()).orElseGet(SeedData::elderQuest);
+        // Story quests are rebuilt from SeedData (it holds their dialogue); storage only says which are done.
+        Quest elderQuest = restored(repos, SeedData.elderQuest());
+        Quest keeperQuest = restored(repos, SeedData.keeperQuest());
+        Quest lampQuest = restored(repos, SeedData.lampQuest());
+        // Nia's puzzle is random, so it is loaded from storage as saved.
         Quest debugQuest = repos.quests().findById(SeedData.debugQuest().getId()).orElseGet(SeedData::debugQuest);
+        Journey journey = SeedData.story(elderQuest, keeperQuest, debugQuest, lampQuest);
 
         List<NPC> npcs = new ArrayList<>(repos.vendors().findAll());
         npcs.add(SeedData.elder(elderQuest));
         npcs.add(SeedData.coder(debugQuest));
+        npcs.add(SeedData.keeper(keeperQuest));
+        npcs.add(SeedData.lamp(lampQuest));
 
         GameSession session = new GameSession(new GameWorld(TileMap.loadResource(MAP_RESOURCE), player, npcs));
+        session.setJourney(journey);
         session.setSaveHandler(() -> {
             save(repos, session);
             return repos.isPersistent() ? "Game saved." : "Game saved for this session only (no database).";
         });
         return session;
+    }
+
+    /** The fresh quest, marked completed if storage says the player already finished it. */
+    private static Quest restored(Repositories repos, Quest fresh) {
+        repos.quests().findById(fresh.getId()).ifPresent(saved -> {
+            if (saved.isCompleted()) {
+                fresh.markCompleted();
+            }
+        });
+        return fresh;
     }
 
     /** True when a player has been saved, i.e. there is something to continue. */
@@ -87,13 +106,13 @@ public final class GameBootstrap {
         if (overwrite) {
             repos.players().delete(SeedData.PLAYER_ID);
         }
-        if (overwrite || repos.items().findAll().isEmpty()) {
-            for (Item item : SeedData.items()) {
-                repos.items().save(item);
-            }
+        // The catalog is always refreshed so a save made before the story items existed gains them.
+        for (Item item : SeedData.items()) {
+            repos.items().save(item);
         }
-        if (overwrite || repos.vendors().findAll().isEmpty()) {
-            for (Vendor vendor : SeedData.vendors()) {
+        // Each vendor is seeded on its own, so an older save gains the new vendors without losing its stock.
+        for (Vendor vendor : SeedData.vendors()) {
+            if (overwrite || repos.vendors().findById(vendor.getId()).isEmpty()) {
                 repos.vendors().save(vendor);
             }
         }
@@ -101,6 +120,11 @@ public final class GameBootstrap {
         Quest elder = SeedData.elderQuest();
         if (overwrite || repos.quests().findById(elder.getId()).isEmpty()) {
             repos.quests().save(elder);
+        }
+        for (Quest story : List.of(SeedData.keeperQuest(), SeedData.lampQuest())) {
+            if (overwrite || repos.quests().findById(story.getId()).isEmpty()) {
+                repos.quests().save(story);
+            }
         }
         // Nia's puzzle is drawn at random, but never the same one the player had last time.
         int puzzleId = SeedData.debugQuest().getId();

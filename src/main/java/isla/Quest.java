@@ -1,5 +1,8 @@
 package isla;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * A simple fetch quest: bring the named item to the quest giver and get paid.
  * A quest with no required item completes as soon as it is turned in.
@@ -12,6 +15,9 @@ public class Quest {
     private final int reward;
     private final String requiredItemName;
     private boolean completed;
+    // Story wiring. Not saved: SeedData rebuilds it every time the game starts.
+    private final List<Quest> prerequisites = new ArrayList<>();
+    private String completionText;
 
     public Quest(int id, int giverNpcId, String description, int reward, String requiredItemName) {
         this.id = id;
@@ -44,6 +50,23 @@ public class Quest {
 
     public boolean isCompleted() {
         return completed;
+    }
+
+    /** Quests that must be completed before this one can be started (chapter order of the story). */
+    public Quest requires(Quest... earlier) {
+        prerequisites.addAll(List.of(earlier));
+        return this;
+    }
+
+    /** What the story says when this quest is turned in (null = the plain "here is your money" line). */
+    public Quest withCompletionText(String text) {
+        this.completionText = text;
+        return this;
+    }
+
+    /** True once every prerequisite quest is done (always true for a quest with none). */
+    public boolean isAvailable() {
+        return prerequisites.stream().allMatch(Quest::isCompleted);
     }
 
     public void markCompleted() {
@@ -85,8 +108,8 @@ public class Quest {
             return InteractionResult.dialogue("Thanks again for your help!");
         }
         if (complete(player)) {
-            return InteractionResult.dialogue("You brought the " + requiredItemName
-                    + "! Here is $" + reward + " for your trouble.");
+            return InteractionResult.dialogue(completionText != null ? completionText
+                    : "You brought the " + requiredItemName + "! Here is $" + reward + " for your trouble.");
         }
         return InteractionResult.dialogue(giverDialogue + " (Quest: " + description + ")");
     }

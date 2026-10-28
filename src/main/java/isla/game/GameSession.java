@@ -3,6 +3,7 @@ package isla.game;
 import isla.DebugQuest;
 import isla.InteractionResult;
 import isla.Item;
+import isla.Journey;
 import isla.ItemCategory;
 import isla.NPC;
 import isla.Player;
@@ -50,6 +51,7 @@ public class GameSession {
     private int puzzleCursor;
     private ItemCategory inventoryTab = ItemCategory.CONSUMABLE;
     private int inventoryCursor;
+    private Journey journey;
     private Supplier<String> saveHandler = () -> "Saving is not available.";
 
     public GameSession(GameWorld world) {
@@ -93,6 +95,15 @@ public class GameSession {
 
     public int getShopCursor() {
         return shopCursor;
+    }
+
+    /** The main story shown in the HUD (null = no story, e.g. in small unit-test worlds). */
+    public Journey getJourney() {
+        return journey;
+    }
+
+    public void setJourney(Journey journey) {
+        this.journey = journey;
     }
 
     /** Sets what the SAVE action does; the handler returns the message to show. */
@@ -364,6 +375,11 @@ public class GameSession {
         r.fillRect(10, 34, 108, 8, "#3A3A3A");
         int filled = p.getMaxStamina() == 0 ? 0 : 108 * p.getStamina() / p.getMaxStamina();
         r.fillRect(10, 34, filled, 8, "#5BD16B");
+        if (journey != null) {
+            r.fillRect(128, 4, 348, 30, "#1E2A38");
+            r.drawText(134, 17, journey.getTitle() + "  " + journey.completedCount() + "/" + journey.size(), GOLD);
+            r.drawText(134, 29, journey.objectiveText(), "#FFFFFF");
+        }
     }
 
     private void renderShop(Renderer r) {
