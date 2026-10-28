@@ -6,5 +6,7 @@ public enum Screen {
     DIALOGUE,
     SHOP,
     INVENTORY,
-    DEBUG_PUZZLE
+    DEBUG_PUZZLE,
+    QUESTS,
+    ENDING
 }

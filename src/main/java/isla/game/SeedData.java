@@ -3,7 +3,6 @@ package isla.game;
 import isla.Consumable;
 import isla.DebugQuest;
 import isla.Item;
-import isla.Journey;
 import isla.Quest;
 import isla.QuestGiver;
 import isla.Shop;
@@ -39,10 +38,7 @@ public final class SeedData {
                 new Tool(4, "Rusty Machete", 30, "Jungle Path"),
                 new Souvenir(5, "Seashell Necklace", 15),
                 new Souvenir(6, "Carved Tiki", 25),
-                new Souvenir(7, "Golden Idol", 60),
-                // Story items: bought from far-away vendors and handed in for the lighthouse quests.
-                new Souvenir(8, "Lamp Oil", 20),
-                new Souvenir(9, "Glass Lens", 45));
+                new Souvenir(7, "Golden Idol", 60));
     }
 
     private static Item item(List<Item> catalog, int id) {
@@ -66,34 +62,42 @@ public final class SeedData {
         jungle.addStock(item(c, 7), 1);
         jungle.addStock(item(c, 6), 1);
 
-        Shop south = new Shop();
-        south.addStock(item(c, 8), 2);
-        south.addStock(item(c, 1), 3);
-
-        Shop deepJungle = new Shop();
-        deepJungle.addStock(item(c, 9), 2);
-
         return List.of(
                 new Vendor(1, "Mara", 12, 12, "vendor_sprite",
                         "Fresh fruit! Fill up before you wander far.", fruit),
                 new Vendor(2, "Tomas", 28, 12, "vendor_sprite",
                         "Tools and trinkets, fair prices.", tools),
                 new Vendor(3, "Yara", 30, 7, "trader_sprite",
-                        "You found the jungle! Rare things for sale.", jungle),
-                new Vendor(4, "Dalia", 30, 36, "vendor_sprite",
-                        "Lamp oil, straight from the south! The lighthouse keeper always runs out.", south),
-                new Vendor(5, "Old Pearl", 28, 5, "trader_sprite",
-                        "A glass lens? Only the finest, from deep in the jungle.", deepJungle));
+                        "You found the jungle! Rare things for sale.", jungle));
     }
 
     public static Quest elderQuest() {
-        return new Quest(1, 1, "Bring a coconut to Elder Kai", 25, "Coconut")
-                .withCompletionText("Bless you! Now a bigger favor: the lighthouse in the east has gone dark "
-                        + "and ships cannot find our harbor. Walk east along the path and speak to Keeper Bo. (+$25)");
+        return new Quest(1, 1, "Bring a coconut to Elder Kai", 25, "Coconut");
     }
 
     public static QuestGiver elder() {
         return elder(elderQuest());
+    }
+
+    /** Elder Kai's second wish: the Golden Idol (sold by Yara in the jungle). Quest row 3, an ordinary Quest. */
+    public static Quest idolQuest() {
+        return new Quest(3, 1, "Bring the Golden Idol to Elder Kai", 100, "Golden Idol");
+    }
+
+    /**
+     * Elder Kai as the game uses him: the coconut quest, then the Golden Idol, then thanks. Delivering the Idol
+     * ends the story. (elder() and elder(Quest) are the coconut-only Elder.)
+     */
+    public static QuestGiver elderWithIdol(Quest coconut, Quest idol) {
+        return new QuestGiver(1, 20, 9, "elder_sprite", List.of(
+                new QuestGiver.Stage(coconut,
+                        "Could you bring me a coconut? My legs are not what they were.",
+                        "Bring Elder Kai a coconut"),
+                new QuestGiver.Stage(idol,
+                        "That coconut was lovely! One last wish: a Golden Idol. Yara sells one deep in the jungle.",
+                        "Find the Golden Idol in the jungle")),
+                "Thank you, traveler. The island is at peace because of you.",
+                "Done: Elder Kai has his Golden Idol").endsTheGame();
     }
 
     public static QuestGiver elder(Quest quest) {
@@ -117,60 +121,8 @@ public final class SeedData {
     }
 
     public static QuestGiver coder(Quest quest) {
-        return new QuestGiver(2, 24, 14, "coder_sprite",
-                "My code is broken and I cannot see why. Can you debug it?", quest);
-    }
-
-    // ---- the main story: relight the lighthouse ----
-
-    /** Chapter 2: Keeper Bo wants lamp oil (sold by Dalia on the south island). */
-    public static Quest keeperQuest() {
-        return new Quest(3, 3, "Bring Lamp Oil to Keeper Bo", 30, "Lamp Oil")
-                .withCompletionText("Lamp oil at last! But the lamp's controller code crashes on start. "
-                        + "Coder Nia in the west village can debug it. (+$30)");
-    }
-
-    public static QuestGiver keeper() {
-        return keeper(keeperQuest());
-    }
-
-    public static QuestGiver keeper(Quest quest) {
-        return new QuestGiver(3, 60, 8, "keeper_sprite",
-                "The great lamp has been dark for weeks. Bring me lamp oil: Dalia sells it, far to the south.", quest)
-                .withLockedDialogue("Hello! I keep this lighthouse. Elder Kai in the west village "
-                        + "said he would send someone to help.");
-    }
-
-    /** Chapter 4 (the finale): fit the Glass Lens, which only Old Pearl in the jungle sells. */
-    public static Quest lampQuest() {
-        return new Quest(4, 4, "Fit the Glass Lens into the lamp", 100, "Glass Lens")
-                .withCompletionText("The beam sweeps across the sea! You relit Isla's lighthouse and ships can "
-                        + "find home again. THE END - thanks for playing! (+$100)");
-    }
-
-    public static QuestGiver lamp() {
-        return lamp(lampQuest());
-    }
-
-    public static QuestGiver lamp(Quest quest) {
-        return new QuestGiver(4, 64, 8, "lamp_sprite",
-                "The great lamp stands cold. It needs a glass lens to focus the beam.", quest)
-                .withLockedDialogue("The great lamp stands cold. Keeper Bo says it needs lamp oil "
-                        + "and fixed code first.");
-    }
-
-    /**
-     * Joins the four quests into one story and returns it. Elder Kai opens it, Keeper Bo needs the Elder done,
-     * and the lamp needs both Bo and Nia's debugging done. Nia has no prerequisite, so the puzzle can be
-     * played any time.
-     */
-    public static Journey story(Quest elder, Quest keeper, Quest debug, Quest lamp) {
-        keeper.requires(elder);
-        lamp.requires(keeper, debug);
-        return new Journey("RELIGHT THE LIGHTHOUSE", "The lighthouse shines again! Thanks for playing.", List.of(
-                new Journey.Chapter(elder, "Bring a coconut to Elder Kai (just north of spawn)"),
-                new Journey.Chapter(keeper, "Buy Lamp Oil from Dalia (south) for Keeper Bo (east)"),
-                new Journey.Chapter(debug, "Debug the lamp code with Coder Nia (near spawn)"),
-                new Journey.Chapter(lamp, "Get a Glass Lens (jungle, needs Machete) for the lamp")));
+        return new QuestGiver(2, 24, 14, "coder_sprite", List.of(new QuestGiver.Stage(quest,
+                "My code is broken and I cannot see why. Can you debug it?",
+                "Help Coder Nia fix her code")), null, "Done: Coder Nia's code is fixed");
     }
 }
