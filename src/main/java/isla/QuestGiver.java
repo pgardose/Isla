@@ -8,6 +8,7 @@ public class QuestGiver extends NPC implements Interactable {
 
     private final int npcId;
     private final Quest quest;
+    private String lockedDialogue = "Come back later. I am not ready yet.";
 
     public QuestGiver(int npcId, int x, int y, String sprite, String dialogue, Quest quest) {
         super(x, y, sprite, dialogue);
@@ -23,15 +24,24 @@ public class QuestGiver extends NPC implements Interactable {
         return quest;
     }
 
+    /** What this NPC says while the quest's earlier chapters are still unfinished. */
+    public QuestGiver withLockedDialogue(String text) {
+        this.lockedDialogue = text;
+        return this;
+    }
+
     @Override
     public InteractionResult interact(Player player) {
+        if (!quest.isAvailable()) {
+            return InteractionResult.dialogue(lockedDialogue);
+        }
         return quest.interact(player, dialogue);
     }
 
     @Override
     public void render(Renderer renderer) {
         super.render(renderer);
-        if (!quest.isCompleted()) {
+        if (!quest.isCompleted() && quest.isAvailable()) {
             renderer.drawLabel(x, y, "?");
         }
     }

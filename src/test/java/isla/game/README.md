@@ -18,11 +18,11 @@ debug broken code to earn money. Progress is saved to a database.
 
 | Exploring | Shop | Debug puzzle |
 |---|---|---|
-| ![Exploring](docs/screenshots/shot_explore.png) | ![Shop](docs/screenshots/shot_shop.png) | ![Debug puzzle](docs/screenshots/shot_puzzle.png) |
+| ![Exploring](../../../../../docs/screenshots/shot_explore.png) | ![Shop](../../../../../docs/screenshots/shot_shop.png) | ![Debug puzzle](../../../../../docs/screenshots/shot_puzzle.png) |
 
 | Main menu | Inventory | Settings |
 |---|---|---|
-| ![Main menu](docs/screenshots/shot_menu.png) | ![Inventory](docs/screenshots/shot_inventory.png) | ![Settings](docs/screenshots/shot_settings.png) |
+| ![Main menu](../../../../../docs/screenshots/shot_menu.png) | ![Inventory](../../../../../docs/screenshots/shot_inventory.png) | ![Settings](../../../../../docs/screenshots/shot_settings.png) |
 
 ## What the game does
 
