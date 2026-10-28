@@ -57,7 +57,7 @@ public class IslaApp extends Application {
         Canvas canvas = new Canvas(GameSession.SCREEN_WIDTH * SCALE, GameSession.SCREEN_HEIGHT * SCALE);
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.scale(SCALE, SCALE);
-        JavaFxRenderer renderer = new JavaFxRenderer(gc);
+        JavaFxRenderer renderer = new JavaFxRenderer(gc, SCALE);
 
         Scene scene = new Scene(new StackPane(canvas));
         scene.setOnKeyPressed(e -> {

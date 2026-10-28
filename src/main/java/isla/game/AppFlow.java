@@ -321,8 +321,8 @@ public class AppFlow {
         }
         String line = message.isEmpty() ? notice : message;
         if (!line.isEmpty()) {
-            r.fillRect(6, GameSession.SCREEN_HEIGHT - 30, GameSession.SCREEN_WIDTH - 12, 24, GameSession.BORDER);
-            r.fillRect(8, GameSession.SCREEN_HEIGHT - 28, GameSession.SCREEN_WIDTH - 16, 20, GameSession.PAPER);
+            r.drawPanel(6, GameSession.SCREEN_HEIGHT - 30, GameSession.SCREEN_WIDTH - 12, 24,
+                    GameSession.PAPER, GameSession.BORDER);
             r.drawText(14, GameSession.SCREEN_HEIGHT - 14, line, GameSession.INK);
         }
     }
@@ -332,8 +332,12 @@ public class AppFlow {
     }
 
     private void panel(Renderer r, int x, int y, int w, int h) {
-        r.fillRect(x, y, w, h, GameSession.BORDER);
-        r.fillRect(x + 2, y + 2, w - 4, h - 4, GameSession.PAPER);
+        r.drawPanel(x, y, w, h, GameSession.PAPER, GameSession.BORDER);
+    }
+
+    /** Like panel(), but the paper is slightly see-through ("#RRGGBBAA") so the title scene glows behind it. */
+    private void glassPanel(Renderer r, int x, int y, int w, int h) {
+        r.drawPanel(x, y, w, h, GameSession.PAPER + GLASS_ALPHA, GameSession.BORDER);
     }
 
     /** Like panel(), but the paper is slightly see-through ("#RRGGBBAA") so the title scene glows behind it. */

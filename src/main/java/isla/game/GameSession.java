@@ -37,12 +37,18 @@ public class GameSession {
     static final String ENDING_STORY = "Elder Kai holds the Golden Idol up to the light and smiles. "
             + "\"The island remembers its treasures again,\" he says. Thanks to you, Isla is at peace.";
 
-    static final String INK = "#3A2A12";
-    static final String PAPER = "#F6EBC8";
-    static final String CARD = "#FFF8E1";
-    static final String BORDER = "#8A6A3A";
-    static final String GOLD = "#FFD35A";
-    static final String MONEY_INK = "#9A6B00";
+    // UI colours. They are the isla.ui.Palette colours (this package may not import isla.ui, so the
+    // hex codes are repeated here; PaletteMatchesGameColoursTest fails if they ever drift apart).
+    static final String INK = "#2B1D0E";        // Palette.INK
+    static final String PAPER = "#F5E9C8";      // Palette.PAPER
+    static final String CARD = "#F5E9C8";       // Palette.PAPER
+    static final String BORDER = "#B5651D";     // Palette.WOOD
+    static final String GOLD = "#F4C542";       // Palette.GOLD
+    static final String MONEY_INK = "#B5651D";  // Palette.WOOD
+    static final String HUD_FILL = "#1A2733";   // Palette.SHADOW
+    static final String HUD_TEXT = "#D6F0F7";   // Palette.FOAM
+    static final String BAR_BACK = "#2B1D0E";   // Palette.INK
+    static final String BAR_FILL = "#7BC96F";   // Palette.GRASS
     private static final int WRAP_CHARS = 76;
     static final int REST_AMOUNT = 10;
 
@@ -422,8 +428,7 @@ public class GameSession {
     }
 
     private void renderQuestList(Renderer r) {
-        r.fillRect(20, 12, 440, 112, BORDER);
-        r.fillRect(22, 14, 436, 108, PAPER);
+        r.drawPanel(20, 12, 440, 112, PAPER, BORDER);
         r.drawText(30, 32, "QUESTS", INK);
         List<String> lines = questLines();
         for (int i = 0; i < lines.size(); i++) {
@@ -434,8 +439,7 @@ public class GameSession {
     }
 
     private void renderEnding(Renderer r) {
-        r.fillRect(20, 12, 440, 248, BORDER);
-        r.fillRect(22, 14, 436, 244, PAPER);
+        r.drawPanel(20, 12, 440, 248, PAPER, BORDER);
         r.drawText(214, 36, "THE END", INK);
         List<String> story = wrap(ENDING_STORY, 66);
         for (int i = 0; i < story.size(); i++) {
@@ -452,17 +456,16 @@ public class GameSession {
 
     private void renderHud(Renderer r) {
         Player p = getPlayer();
-        r.fillRect(4, 4, 120, 44, "#1E2A38");
+        r.drawPanel(4, 4, 120, 44, HUD_FILL, BORDER);
         r.drawText(10, 17, "$" + p.getMoney(), GOLD);
-        r.drawText(10, 29, "STA " + p.getStamina() + "/" + p.getMaxStamina(), "#FFFFFF");
-        r.fillRect(10, 34, 108, 8, "#3A3A3A");
+        r.drawText(10, 29, "STA " + p.getStamina() + "/" + p.getMaxStamina(), HUD_TEXT);
+        r.fillRect(10, 34, 108, 8, BAR_BACK);
         int filled = p.getMaxStamina() == 0 ? 0 : 108 * p.getStamina() / p.getMaxStamina();
-        r.fillRect(10, 34, filled, 8, "#5BD16B");
+        r.fillRect(10, 34, filled, 8, BAR_FILL);
     }
 
     private void renderShop(Renderer r) {
-        r.fillRect(20, 12, 440, 182, BORDER);
-        r.fillRect(22, 14, 436, 178, PAPER);
+        r.drawPanel(20, 12, 440, 182, PAPER, BORDER);
         r.drawText(30, 30, "FOR SALE", INK);
         r.drawText(396, 30, "$" + getPlayer().getMoney(), MONEY_INK);
 
@@ -485,8 +488,7 @@ public class GameSession {
     }
 
     private void renderPuzzle(Renderer r) {
-        r.fillRect(20, 12, 440, 182, BORDER);
-        r.fillRect(22, 14, 436, 178, PAPER);
+        r.drawPanel(20, 12, 440, 182, PAPER, BORDER);
         r.drawText(30, 30, "DEBUG: pick the fix", INK);
         r.drawText(396, 30, "$" + activePuzzle.getReward(), MONEY_INK);
 
@@ -505,8 +507,7 @@ public class GameSession {
     }
 
     private void renderInventory(Renderer r) {
-        r.fillRect(20, 12, 440, 182, BORDER);
-        r.fillRect(22, 14, 436, 178, PAPER);
+        r.drawPanel(20, 12, 440, 182, PAPER, BORDER);
         r.drawText(30, 30, "INVENTORY  " + getPlayer().getInventory().size() + "/"
                 + getPlayer().getInventory().getCapacity(), INK);
 
@@ -537,16 +538,14 @@ public class GameSession {
     }
 
     static void renderMessageBox(Renderer r, String text) {
-        r.fillRect(6, SCREEN_HEIGHT - 30, SCREEN_WIDTH - 12, 24, BORDER);
-        r.fillRect(8, SCREEN_HEIGHT - 28, SCREEN_WIDTH - 16, 20, PAPER);
+        r.drawPanel(6, SCREEN_HEIGHT - 30, SCREEN_WIDTH - 12, 24, PAPER, BORDER);
         r.drawText(14, SCREEN_HEIGHT - 14, text, INK);
     }
 
     /** Classic RPG dialogue box in the bottom third of the screen. */
     static void renderDialogueBox(Renderer r, List<String> lines, String hint) {
         int top = SCREEN_HEIGHT - 70;
-        r.fillRect(6, top, SCREEN_WIDTH - 12, 64, BORDER);
-        r.fillRect(8, top + 2, SCREEN_WIDTH - 16, 60, PAPER);
+        r.drawPanel(6, top, SCREEN_WIDTH - 12, 64, PAPER, BORDER);
         for (int i = 0; i < lines.size() && i < 3; i++) {
             r.drawText(16, top + 18 + i * 12, lines.get(i), INK);
         }
