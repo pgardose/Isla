@@ -1,7 +1,31 @@
+# Build output
 target/
-.superpowers/
 out/
+dist/
 *.class
+dependency-reduced-pom.xml
+
+# Local data and private settings (saved games, MySQL password, options)
+isla-data/
+*.mv.db
+*.trace.db
 db.properties
 settings.properties
-isla-data/
+.env
+.env.*
+
+# IDE and editor files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+nbproject/
+
+# OS and tool junk
+.DS_Store
+Thumbs.db
+*.log
+hs_err_pid*
+.superpowers/

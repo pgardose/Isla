@@ -1,115 +1,147 @@
 # Isla: A 2D Island Trading Adventure
 
-Java OOP course project (UIC, College of Computing Education): a GBA-style top-down island game.
-Walk around a tile-based island, buy items from vendors on a limited budget, manage a capacity-limited
-inventory, and run a simple fetch quest. Progress is saved to MySQL.
+A GBA-style, top-down island game written in **Java 21 with JavaFX**, built as a Java OOP course project
+(UIC, College of Computing Education). Walk around a tile-based world, buy items from
+vendors on a limited budget, manage a capacity-limited inventory, help the islanders with quests and
+debug broken code to earn money. Progress is saved to a database.
 
-**Author:** Pearl Kristian M. Gardose (Pj)
+## Team members and roles
 
-**Status:** milestones 1-4 done (walkable island, interaction/shop/inventory UI, MySQL persistence, `DebugQuest` puzzle)
-plus the **main menu** from milestone 5 (Continue / New Game / Settings / Quit). Still open from milestone 5:
-real art, the Figma prototype and the pitch deck.
+| Member | Role |
+|---|---|
+| Pearl Kristian M. Gardose | Coding and debugging |
+| Gian Theo M. Chiong | Coding and debugging |
+| Kyle Andrei A. Arigo | Art style and testing |
+| Drazen Jr. I. Nepa | Diagrams, pitch deck, demo script and video |
 
-![Exploring](docs/screenshots/shot_explore.png)
-![Shop](docs/screenshots/shot_shop.png)
-![Debug puzzle](docs/screenshots/shot_puzzle.png)
-![Main menu](docs/screenshots/shot_menu.png)
-![Settings](docs/screenshots/shot_settings.png)
+## Screenshots
 
-## Run it
+| Exploring | Shop | Debug puzzle |
+|---|---|---|
+| ![Exploring](docs/screenshots/shot_explore.png) | ![Shop](docs/screenshots/shot_shop.png) | ![Debug puzzle](docs/screenshots/shot_puzzle.png) |
 
-Requirements: JDK 21, Maven 3.9+. Nothing else: saving uses a built-in database (H2) that Maven downloads for you.
-MySQL is optional.
+| Main menu | Inventory | Settings |
+|---|---|---|
+| ![Main menu](docs/screenshots/shot_menu.png) | ![Inventory](docs/screenshots/shot_inventory.png) | ![Settings](docs/screenshots/shot_settings.png) |
 
-```bash
-mvn javafx:run          # play
-mvn test                # unit tests (the database tests run on the built-in H2; MySQL is optional, see below)
-```
+## What the game does
 
-The game opens on the main menu. Add `--new` to skip the menu and start over, discarding the saved game:
-`mvn javafx:run -Djavafx.args="--new"`.
+- **Explore** an 80x52 tile world made of three islands joined by bridges, with collision, a scrolling camera and a locked jungle.
+- **Trade:** three vendors sell items with limited stock. You start with $50 and 6 inventory slots, and you are never charged for a purchase that fails.
+- **Manage stamina:** walking costs 1 stamina per 10 steps. At 0 you cannot walk until you rest or use a consumable.
+- **Quests:** a fetch quest (bring Elder Kai a coconut) and a **debugging puzzle** (Coder Nia shows a broken line of Java and you pick the fix).
+- **A different puzzle each game:** a new game draws one of 13 puzzles (never the one you had last time) with the answers shuffled. Continuing keeps your puzzle.
+- **Save and continue:** a main menu with Continue, New Game, How to Play, Settings and Quit. Saving works with no setup.
 
-### Saving: works out of the box
+## Prerequisites and dependencies
 
-Progress is saved with **F5**, automatically when you leave the island with X/Esc, and when the window closes
-(unless you turn **Autosave on close** off in Settings). The game stores it in a **built-in database** in the
-`isla-data/` folder next to `pom.xml` (created on first run, ignored by git). Delete that folder, or use
-*Settings > Erase saved game*, to start from scratch.
+| You need | Version | Notes |
+|---|---|---|
+| **JDK** | 21 | Check with `java -version` |
+| **Apache Maven** | 3.9 or newer | Check with `mvn -version` |
+| Internet (first run only) | | Maven downloads the libraries below |
 
-The game picks where to save like this:
+Libraries (downloaded automatically by Maven, nothing to install by hand): JavaFX 21.0.5 (graphics), H2 2.2.220 (the built-in save database),
+MySQL Connector/J 8.4.0 (only used if you choose MySQL) and JUnit 5.10.2 (tests only).
+**No database server is required**: saving works out of the box. MySQL is optional (see below).
 
-1. **MySQL**, if a `db.properties` file exists and the server answers (see below).
-2. Otherwise the **built-in database**. If `db.properties` exists but MySQL is down, you get a notice and the built-in one is used.
-3. Only if the built-in database cannot open either (read-only folder, or a second Isla window already has it open)
-   does the game run from memory and show "No database available - progress will not be saved."
+## Setup and installation
 
-### Optional: use your own MySQL server
+1. Clone this repository (or download it as a ZIP and unzip it), then open a terminal in the project folder (the one containing `pom.xml`).
+2. That is all: the first `mvn` command below downloads everything the project needs.
 
-```sql
-CREATE DATABASE isla CHARACTER SET utf8mb4;
-```
-
-Copy `db.properties.example` to `db.properties` (next to `pom.xml`) and fill in the URL, user and password.
-The game creates the tables and seeds the island on first run (`src/main/resources/db/schema.sql`).
-Saves already in the built-in database are not copied over to MySQL.
-
-The DAO and save/continue tests run on a throwaway in-memory H2 database by default. To run them on MySQL instead
-(they **empty** the tables in the database you name, so use a throwaway one):
+## Running the game
 
 ```bash
-mvn test -Disla.test.jdbcUrl=jdbc:mysql://localhost:3306/isla_test \
-         -Disla.test.jdbcUser=isla -Disla.test.jdbcPassword=isla
+mvn javafx:run
 ```
 
-## Controls
+The game opens on the main menu. Choose **New Game** to start (see *Controls* below).
+To skip the menu and start over, discarding any saved game: `mvn javafx:run -Djavafx.args="--new"`.
+
+## Running the tests
+
+```bash
+mvn test
+```
+
+### Controls
 
 | Key | Action |
 |---|---|
-| Arrows / WASD | Walk, move cursor (Up/Down chooses a puzzle option) |
+| Arrows / WASD | Walk, move the menu cursor (Up/Down also chooses a puzzle answer) |
 | Z / Enter / Space | Talk, confirm, buy, use, submit a puzzle answer |
-| X / Esc / Backspace | Cancel, leave |
+| X / Esc / Backspace | Cancel, close a window, or (while walking) go back to the main menu |
 | I | Inventory (Left/Right switches tabs) |
 | R | Rest (+10 stamina) |
 | F5 | Save |
-| X / Esc (while walking) | Leave the island back to the main menu (saves first if autosave is on) |
 
-## How the game works
+### The world and its rules
 
-- **Main menu:** *Continue* loads your save (greyed out when there is none), *New Game* starts over (and asks
-  "Overwrite your saved game?" first, defaulting to No), *How to Play* (goal and controls), *Settings*, *Quit*.
-- **Settings:** *Autosave on close* On/Off (remembered in `settings.properties`) and *Erase saved game* (asks first).
+| Who / what | Details |
+|---|---|
+| Mara (`!`) | Sells Coconut Water ($10), Coconut ($8) and Banana ($5) |
+| Tomas (`!`) | Sells the Rusty Machete ($30), Seashell Necklace ($15) and Carved Tiki ($25) |
+| Yara (`!`) | Hides in the jungle and sells rare items (Golden Idol $60). Reach her by using the machete to unlock the Jungle Path |
+| Elder Kai (`?`) | Wants a Coconut and pays $25, once |
+| Coder Nia (`?`) | Shows broken code. A wrong pick costs nothing and you can retry. The right fix pays $40, once |
+| Items | **Consumables** restore stamina (and are kept if your stamina is already full), **Tools** unlock areas, **Souvenirs** are collectibles |
 
-- Start with $50, 100 stamina, 6 inventory slots. Walking costs 1 stamina per 10 steps; at 0 you must rest (R) or use a consumable.
-- Vendors (`!`) sell items with limited stock. Buying is blocked without enough money or with a full inventory (you are never charged for nothing).
-- **Elder Kai** (`?`) wants a Coconut (sold by Mara for $8) and pays $25 once.
-- **Coder Nia** (teal square, below the main road near the start) has a broken line of code. Pick the fix from four options. A wrong pick costs nothing and you can retry; the right one pays $40 once.
-  Every **new game draws a different puzzle** from a bank of 13 (never the one you had last time) with the answers shuffled; **Continue keeps your puzzle**.
-  Add your own in `DebugQuestBank.java` (one entry each).
-- The world is now **80x52**: the home island, a village island to the east (follow the road across the bridge) and a big island to the south (the bridge at the bottom of the home island).
-- The **Rusty Machete** (Tomas, $30) is a Tool: use it from the inventory to unlock the **Jungle Path**, which hides Yara's rare items.
+## Saving and the database
+
+Progress is saved with **F5**, automatically when you leave the island with X/Esc, and when the window closes
+(unless you switch **Autosave on close** off in Settings). *Settings > Erase saved game* starts from scratch.
+
+The game chooses where to save, trying the best option first:
+
+1. **MySQL**, if a `db.properties` file exists and the server answers (optional, see below).
+2. Otherwise a **built-in H2 database** stored in an `isla-data/` folder. This is what normally happens, with no setup.
+3. Only if neither can open does it run from memory and warn "progress will not be saved".
+
+Files are kept in the project folder when you run from it. Launched from anywhere else (for example a packaged app),
+they go in a `.isla` folder in your home directory.
+
+**Using your own MySQL (optional):** create a database (`CREATE DATABASE isla CHARACTER SET utf8mb4;`), copy
+`db.properties.example` to `db.properties` and fill in the URL, user and password. The game creates the tables and
+seeds the island on first run (`src/main/resources/db/schema.sql`). The same schema and SQL run on both MySQL and H2
+(H2 in `MODE=MySQL`).
+
+### Tables
+
+| Table | Holds |
+|---|---|
+| `players` | money, stamina, position, name |
+| `items` | the item catalog (type, price, stamina restored, area unlocked) |
+| `inventory` | which items the player carries and how many |
+| `vendors`, `shop_stock` | each vendor, and the stock left in each shop |
+| `quests` | quest text, reward, required item, completed flag |
+| `unlocked_areas` | areas the player has opened (e.g. the Jungle Path) |
+| `debug_quests`, `quest_options` | a debugging puzzle's snippet and correct answer, and its answer choices in order |
 
 ## Architecture
 
 ```
-isla            model: Entity, Player, NPC, Vendor, QuestGiver, Item (+3 subclasses), Inventory, Shop, Quest,
-                       Interactable, InteractionResult, Renderer (interface)
+isla            model: Entity, Player, NPC, Vendor, QuestGiver, Item (+3 subclasses), Inventory, Shop,
+                       Quest, DebugQuest, Interactable, InteractionResult, Renderer (interface)
 isla.world      TileType, TileMap (loads maps/island.txt), GameWorld (movement, collision, interaction)
-isla.game       AppFlow (menu / settings / playing), Settings, GameSession (Actions -> state -> drawing),
-                GameBootstrap (start/save/erase), SeedData (starting content)
-isla.dao        Repository<T> + ItemDAO/PlayerDAO/VendorDAO/QuestDAO, in-memory and JDBC implementations,
-                Database (MySQL or built-in H2), StorageOpener (picks which one to use)
-isla.ui         JavaFX only: IslaApp, JavaFxRenderer, KeyBindings
+isla.game       AppFlow (menu / how to play / settings / playing), Settings, AppPaths, GameSession
+                (keys -> game state -> drawing), GameBootstrap (start/save/erase), DebugQuestBank, SeedData
+isla.dao        Repository<T>, ItemDAO / PlayerDAO / VendorDAO / QuestDAO with in-memory and JDBC versions,
+                Database (MySQL or built-in H2), StorageOpener (chooses where to save)
+isla.ui         the only package that imports JavaFX: IslaApp, JavaFxRenderer, KeyBindings
 ```
 
-Only `isla.ui` imports JavaFX. Everything else draws through the small `Renderer` interface, so the whole game
-is unit-tested without a window (243 tests).
+**Design idea:** only `isla.ui` touches JavaFX. Everything else draws through the small `Renderer` interface and
+receives input as plain `Action` values, so the whole game, including the menu and the puzzle screens, is unit tested without opening a window.
 
-### OOP pillars
+### OOP concepts
 
-- **Encapsulation:** `Player.spend()` validates funds; `Inventory` and `Shop` keep their collections private and enforce capacity/stock; `Player.getUnlockedAreas()` is read-only.
-- **Inheritance:** `Player`/`NPC` extend `Entity`; `Vendor`/`QuestGiver` extend `NPC`; `DebugQuest` extends `Quest`; `Consumable`/`Tool`/`Souvenir` extend `Item`.
-- **Polymorphism:** `Item.use()` and `Item.getUnusableReason()` differ per subclass; `Interactable.interact()` returns a shop for a `Vendor` and dialogue for a `QuestGiver`; `Quest.interact()` turns in a fetch quest, while `DebugQuest` overrides it to open a puzzle; `Entity.render()` draws a "!" for vendors and a "?" for quest givers.
-- **Abstraction:** `Entity`, `NPC`, `Item` are abstract; `Interactable`, `Renderer` and the DAO interfaces hide how things are drawn or stored.
+| Pillar | Where it is used |
+|---|---|
+| **Encapsulation** | `Player.spend()` validates funds; `Inventory` and `Shop` keep their collections private and enforce capacity and stock; `Player.getUnlockedAreas()` is read-only; `Settings` hides how options are stored |
+| **Inheritance** | `Player` and `NPC` extend `Entity`; `Vendor` and `QuestGiver` extend `NPC`; `Consumable`, `Tool` and `Souvenir` extend `Item`; `DebugQuest` extends `Quest` |
+| **Polymorphism** | `Item.use()` and `getUnusableReason()` differ per item type; `Interactable.interact()` returns a shop for a `Vendor` and dialogue for a `QuestGiver`; `Quest.interact()` turns in a fetch quest while `DebugQuest` overrides it to open a puzzle; `Entity.render()` draws "!" for vendors and "?" for quest givers |
+| **Abstraction** | `Entity`, `NPC` and `Item` are abstract; `Interactable`, `Renderer` and the DAO interfaces hide how things are drawn or stored |
 
 ### Class diagram
 
@@ -149,24 +181,7 @@ classDiagram
   Interactable ..> InteractionResult : returns
 ```
 
-### State diagram: app flow (main menu)
-
-```mermaid
-stateDiagram-v2
-  [*] --> MENU
-  MENU --> PLAYING: Continue (save exists) / New Game (no save)
-  MENU --> CONFIRM_NEW: New Game (save exists)
-  CONFIRM_NEW --> PLAYING: Yes
-  CONFIRM_NEW --> MENU: No / X
-  MENU --> SETTINGS: Settings
-  SETTINGS --> CONFIRM_ERASE: Erase saved game (save exists)
-  CONFIRM_ERASE --> SETTINGS: Yes (erased) / No / X
-  SETTINGS --> MENU: Back / X
-  PLAYING --> MENU: X or Esc while walking (saves if autosave on)
-  MENU --> [*]: Quit
-```
-
-### Sequence diagram: player buys an item
+### Sequence diagram: the player buys an item
 
 ```mermaid
 sequenceDiagram
@@ -197,36 +212,64 @@ sequenceDiagram
   end
 ```
 
-## Database
+### State diagram: the menu and app flow
 
-The same schema and DAOs run on MySQL or on the built-in H2 database (H2 in `MODE=MySQL`), so there is one
-set of SQL for both. 
-`players`, `items`, `inventory`, `vendors`, `shop_stock`, `quests` as in the original plan, plus a few additions
-the game needs (see `docs/BUILD_LOG.md`): table `unlocked_areas`, and columns `items.unlocks_area`,
-`quests.required_item`, `vendors.sprite`, `vendors.dialogue`. Milestone 4 adds `debug_quests` (snippet, correct answer) and `quest_options` (the choices, in order), kept in their own tables so a database created earlier gains them automatically. The DAO layer (`Repository<T>`: `save`,
-`findById`, `findAll`, `delete`) has an in-memory and a JDBC implementation; both pass the same contract
-tests (`DaoContractTest`).
+```mermaid
+stateDiagram-v2
+  [*] --> MENU
+  MENU --> PLAYING: Continue (save exists) / New Game (no save)
+  MENU --> CONFIRM_NEW: New Game (save exists)
+  CONFIRM_NEW --> PLAYING: Yes
+  CONFIRM_NEW --> MENU: No / X
+  MENU --> HELP: How to Play
+  HELP --> MENU: Z / X
+  MENU --> SETTINGS: Settings
+  SETTINGS --> CONFIRM_ERASE: Erase saved game (save exists)
+  CONFIRM_ERASE --> SETTINGS: Yes (erased) / No / X
+  SETTINGS --> MENU: Back / X
+  PLAYING --> MENU: X or Esc while walking (saves if autosave is on)
+  MENU --> [*]: Quit
+```
 
-## Editing the island
+## Testing
 
-`src/main/resources/maps/island.txt` is plain text, one character per tile (80x52 now):
-`g` grass, `s` sand, `w` water (blocked), `p` path, `t` palm (blocked), `h` hut (blocked),
-`j` jungle (needs the Jungle Path). Tests check that every tile you can walk on can be reached from the start
-(and that only Yara's jungle pocket needs the machete), so an accidental cut-off island fails the build.
+The project has **244 JUnit 5 tests** (`mvn test`), written test-first. They cover:
 
-To regenerate or enlarge the world, edit and run `java tools/GenerateMap.java` (it grows `tools/island-40x26.txt`, the
-original island, keeping every original coordinate). Add NPCs in `SeedData` on tiles the generator leaves as grass or path.
+- the model rules (buying, inventory limits, stamina, quests, the puzzle's right and wrong answers);
+- every game screen and the menu flow through plain `Action` inputs, using a recording renderer instead of a window;
+- the DAO layer: one shared contract test runs against both the in-memory and the JDBC implementations;
+- persistence: save and continue, a puzzle surviving a restart, and reopening the built-in database from its files;
+- the map: it is at least 80x52 and every tile you can walk on can be reached from the start;
+- the choice of storage and its fallbacks (MySQL down, folder not writable).
 
-## Project docs
+The database tests run on a throwaway in-memory H2 database by default. To run them against MySQL instead
+(they **empty** the tables of the database you name, so use a throwaway one):
 
-- `docs/PACKAGING.md`: how to build one runnable jar or a double-click app so anyone can play
+```bash
+mvn test -Disla.test.jdbcUrl=jdbc:mysql://localhost:3306/isla_test \
+         -Disla.test.jdbcUser=isla -Disla.test.jdbcPassword=isla
+```
 
-- `docs/superpowers/specs/2026-10-04-isla-design.md`: approved design
-- `docs/superpowers/plans/2026-10-04-isla-milestones-1-3.md`: implementation plan
-- `docs/BUILD_LOG.md`: what was built, decisions, verification, limitations
+Some of the tests deliberately break the setup, so the game's fallback messages are printed only when they genuinely happen.
 
-## Roadmap
+## Extending the game
 
-- [x] Milestone 4: `DebugQuest extends Quest` (multiple-choice debugging puzzle for the teacher's requirement)
-- [x] Milestone 5a: main menu (Continue / New Game / Settings / Quit)
-- [ ] Milestone 5b: real art, Figma prototype, pitch deck
+- **Map:** `src/main/resources/maps/island.txt` is plain text, one character per tile: `g` grass, `s` sand, `w` water (blocked),
+  `p` path, `t` palm (blocked), `h` hut (blocked), `j` jungle (needs the Jungle Path). `java tools/GenerateMap.java` regenerates the
+  80x52 world from the original island in `tools/island-40x26.txt`.
+- **Puzzles:** add one entry to `DebugQuestBank` (a title, a broken line of code under about 60 characters, the fix and three wrong answers).
+- **NPCs, vendors and items:** add them in `SeedData`.
+
+## Known limitations
+
+- The graphics are placeholder coloured squares and tiles; there is no final art yet.
+- One saved game per computer (or per database); there is no player-name or profile screen.
+- The two new islands have roads, huts and palms but no shops or NPCs yet.
+- `docs/PACKAGING.md` describes building a runnable jar and a double-click app; those steps have not been tried on every operating system.
+
+## Project documents
+
+- `docs/BUILD_LOG.md`: what was built in each milestone, the decisions made, and what was checked.
+- `docs/superpowers/specs/2026-10-04-isla-design.md`: the approved design.
+- `docs/superpowers/plans/2026-10-04-isla-milestones-1-3.md`: the implementation plan.
+- `docs/PACKAGING.md`: how to package the game for other people.
