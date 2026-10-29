@@ -1,6 +1,6 @@
 # Isla: A 2D Island Trading Adventure
 
-Java OOP course project (UIC, College of Computing College): a GBA-style top-down island game.
+Java OOP course project (UIC, College of Computer Studies): a GBA-style top-down island game.
 Walk around a tile-based island, buy items from vendors on a limited budget, manage a capacity-limited
 inventory, help the islanders with quests and debug broken code to earn money. Progress is saved to a built-in
 database (no setup), or to MySQL if you prefer.
