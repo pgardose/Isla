@@ -61,6 +61,8 @@ public class GameSession {
     static final String DANGER = "#E8664A";     // Palette.CORAL
     /** What a nap in a villager's hut costs: rest is never free, so stamina and money both matter. */
     public static final int HUT_NAP_PRICE = 10;
+    /** Extra stamina lost per step taken next to a broken (unfixed) cursed tile. */
+    public static final int GLITCH_STATIC_STAMINA = 2;
 
     private final GameWorld world;
     private Screen screen = Screen.EXPLORING;
@@ -72,6 +74,7 @@ public class GameSession {
     private String deathCause = "";
     private boolean faintWarned;
     private boolean checkpoints;
+    private int previousBest = -1;
     private Shop activeShop;
     private int shopCursor;
     private DebugQuest activePuzzle;
@@ -116,6 +119,16 @@ public class GameSession {
     /** When on, the game saves by itself each time a story step is completed (AppFlow turns this on). */
     public void setCheckpoints(boolean on) {
         this.checkpoints = on;
+    }
+
+    /** The best score before this run (-1 = none), so the ending can say whether this run beat it. */
+    public void setPreviousBest(int points) {
+        this.previousBest = points;
+    }
+
+    /** This playthrough's score so far: wrong answers and deaths. */
+    public Score getScore() {
+        return new Score(getPlayer().getWrongAnswers(), getPlayer().getDeaths());
     }
 
     public GameWorld getWorld() {
@@ -201,8 +214,9 @@ public class GameSession {
             lines.add("Cursed stones repaired: " + stonesFixed + " of " + stones);
             lines.add("Clues found: " + cluesFound().size() + " of " + SeedData.CLUES.size());
         }
-        lines.add("Quests completed: " + done + " of " + total);
-        lines.add("Money earned from quests: $" + earned + "   Money in hand: $" + getPlayer().getMoney());
+        lines.add("Quests completed: " + done + " of " + total + "   Money in hand: $" + getPlayer().getMoney());
+        Score score = getScore();
+        lines.add("Wrong answers: " + score.wrongAnswers() + "   Deaths: " + score.deaths());
         return lines;
     }
 
@@ -303,8 +317,20 @@ public class GameSession {
     }
 
     private void walk(int dx, int dy) {
-        if (world.movePlayer(dx, dy) == MoveResult.TOO_TIRED) {
+        MoveResult result = world.movePlayer(dx, dy);
+        if (result == MoveResult.TOO_TIRED) {
             message = "You are too tired to move. Press R to rest or use a consumable.";
+        }
+        if (result == MoveResult.MOVED && world.playerNextToActiveGlitch()) {
+            Player p = getPlayer();
+            p.expendStamina(Math.min(GLITCH_STATIC_STAMINA, p.getStamina()));
+            message = "Glitch static stings you! -" + GLITCH_STATIC_STAMINA + " stamina. Fix the stone to stop it.";
+            if (p.getStamina() <= LOW_STAMINA && !faintWarned) {
+                message += " You feel faint!";
+            }
+            checkStamina("You lingered too long by the cursed tiles. The glitch static drained the last of your"
+                    + " strength.");
+            return;
         }
         checkStamina("Your legs gave out far from food and shade. You collapsed from exhaustion and never woke up.");
     }
@@ -314,6 +340,7 @@ public class GameSession {
         Player p = getPlayer();
         if (p.getStamina() <= 0) {
             deathCause = causeIfDead;
+            p.recordDeath();
             activePuzzle = null;
             activeShop = null;
             screen = Screen.GAME_OVER;
@@ -478,6 +505,7 @@ public class GameSession {
         } else {
             int cost = Math.min(puzzle.wrongAnswerStaminaCost(), p.getStamina());
             p.expendStamina(cost);
+            p.recordWrongAnswer();
             message = puzzle.feedbackFor(puzzleCursor)
                     + (cost > 0 ? " Glitch shock! -" + cost + " stamina." : "");
             if (cost > 0) {
@@ -685,6 +713,9 @@ public class GameSession {
                 r.drawText(40, y + 16 + i * 14, "- " + side.get(i), INK);
             }
         }
+        Score score = getScore();
+        r.drawText(30, 238, "Wrong answers: " + score.wrongAnswers() + "   Deaths: " + score.deaths()
+                + "   Rank so far: " + score.rank(), INK);
         r.drawText(30, 254, "Story progress: " + journey.completedCount() + " of " + journey.size()
                 + " steps    Q or X: close", BORDER);
     }
@@ -696,14 +727,22 @@ public class GameSession {
         for (int i = 0; i < story.size(); i++) {
             r.drawText(34, 48 + i * 13, story.get(i), INK);
         }
-        int y = 48 + story.size() * 13 + 10;
+        int y = 48 + story.size() * 13 + 8;
         r.drawText(34, y, "Your story", MONEY_INK);
         List<String> summary = endingSummary();
         for (int i = 0; i < summary.size(); i++) {
-            r.drawText(46, y + 16 + i * 14, summary.get(i), INK);
+            r.drawText(46, y + 14 + i * 13, summary.get(i), INK);
         }
-        r.drawText(34, 236, "Z: keep exploring", INK);
-        r.drawText(34, 252, "X: back to the main menu (saves first)", INK);
+        Score score = getScore();
+        int ry = y + 14 + summary.size() * 13 + 6;
+        r.fillRect(34, ry - 11, 412, 16, GOLD);
+        r.drawText(42, ry, "RANK " + score.rank() + "  " + score.title() + "   " + score.points() + " points", INK);
+        String best = previousBest < 0 ? "Your first finished story!"
+                : score.points() > previousBest ? "New personal best! (was " + previousBest + ")"
+                : "Best so far: " + previousBest + " (" + Score.rankFor(previousBest, previousBest == Score.START)
+                        + "). Play again to beat it!";
+        r.drawText(42, ry + 16, best, MONEY_INK);
+        r.drawText(34, 252, "Z: keep exploring     X: back to the main menu (saves first)", INK);
     }
 
     private void renderHud(Renderer r) {

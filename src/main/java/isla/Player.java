@@ -26,6 +26,8 @@ public class Player extends Entity {
     private final Inventory inventory;
     private final Set<String> unlockedAreas = new HashSet<>();
     private int stepsSinceDrain;
+    private int wrongAnswers;
+    private int deaths;
 
     public Player(int id, String name, int startingMoney, int maxStamina, int inventoryCapacity) {
         super(0, 0, "player_sprite");
@@ -130,6 +132,33 @@ public class Player extends Entity {
         }
         stamina -= amount;
         return true;
+    }
+
+    /** Wrong answers given this playthrough (code fixes and accusations): part of the final score. */
+    public int getWrongAnswers() {
+        return wrongAnswers;
+    }
+
+    /** Times the hero died this playthrough: part of the final score. */
+    public int getDeaths() {
+        return deaths;
+    }
+
+    public void recordWrongAnswer() {
+        wrongAnswers++;
+    }
+
+    public void recordDeath() {
+        deaths++;
+    }
+
+    /** Restores the saved counters (a loaded game, or the stats carried over from a death). */
+    public void restoreStats(int wrongAnswers, int deaths) {
+        if (wrongAnswers < 0 || deaths < 0) {
+            throw new IllegalArgumentException("Stats cannot be negative");
+        }
+        this.wrongAnswers = wrongAnswers;
+        this.deaths = deaths;
     }
 
     public void unlockArea(String areaName) {

@@ -81,3 +81,12 @@ CREATE TABLE IF NOT EXISTS quest_options (
     PRIMARY KEY (quest_id, option_index),
     FOREIGN KEY (quest_id) REFERENCES debug_quests (quest_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Score: wrong answers and deaths for the current playthrough (the ending turns them into a rank).
+-- A separate table, so databases created before the score existed gain it automatically.
+CREATE TABLE IF NOT EXISTS player_stats (
+    player_id      INT  NOT NULL PRIMARY KEY,
+    wrong_answers  INT  NOT NULL DEFAULT 0,
+    deaths         INT  NOT NULL DEFAULT 0,
+    CONSTRAINT fk_stats_player FOREIGN KEY (player_id) REFERENCES players (player_id) ON DELETE CASCADE
+) ENGINE=InnoDB;

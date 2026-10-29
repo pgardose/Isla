@@ -18,8 +18,24 @@ import java.util.Properties;
 public class Settings {
 
     private static final String AUTOSAVE_KEY = "autosave";
+    private static final String BEST_SCORE_KEY = "bestScore";
 
     private boolean autosave = true;
+    private int bestScore = -1;
+
+    /** The best score ever reached on this computer, or -1 if the story was never finished. */
+    public int getBestScore() {
+        return bestScore;
+    }
+
+    /** Keeps the score if it beats the best; returns true if it did (a new personal best). */
+    public boolean offerScore(int points) {
+        if (points > bestScore) {
+            bestScore = points;
+            return true;
+        }
+        return false;
+    }
 
     public boolean isAutosave() {
         return autosave;
@@ -45,12 +61,20 @@ public class Settings {
         if ("false".equalsIgnoreCase(value)) {
             settings.autosave = false;
         }
+        try {
+            settings.bestScore = Integer.parseInt(props.getProperty(BEST_SCORE_KEY, "-1").trim());
+        } catch (NumberFormatException e) {
+            settings.bestScore = -1;
+        }
         return settings;
     }
 
     public void save(Path file) throws IOException {
         Properties props = new Properties();
         props.setProperty(AUTOSAVE_KEY, Boolean.toString(autosave));
+        if (bestScore >= 0) {
+            props.setProperty(BEST_SCORE_KEY, Integer.toString(bestScore));
+        }
         Path folder = file.toAbsolutePath().getParent();
         if (folder != null) {
             Files.createDirectories(folder);

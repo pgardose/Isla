@@ -189,3 +189,13 @@ gone (resting only next to huts). With autosave on, every completed story step s
 
 A nap at a hut now costs $10 (refused without the money); pressing R anywhere else does nothing. Stamina and money
 now pull against each other: food or a paid nap, or you die. 366 tests pass.
+
+## 2026-10-29: Glitch hazards, score and ranks, submission clean-up
+
+- Hazards: each step next to an unfixed glitch tile (both bridges, the red vines) costs 2 extra stamina and can kill.
+- Score: 1000 points, -40 per wrong answer, -150 per death; ranks S/A/B/C/D with titles, shown on the ending and in
+  the journal. Counts are saved in the new `player_stats` table (CREATE TABLE IF NOT EXISTS, so older databases gain
+  it), carried across death, and the best score is kept in `settings.properties` and shown on the main menu.
+- Clean-up for submission: removed the stray `t` file (a pasted `git diff`), the stale README copy in the test folder,
+  and the `.idea` folder (already listed in `.gitignore`). Version 1.0.0. README rewritten; presentation notes added.
+- 381 tests pass (built with javac and the JUnit console here; run `mvn test` to confirm on a machine with Maven Central).

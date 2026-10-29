@@ -32,6 +32,7 @@ public class JdbcPlayerDAO implements PlayerDAO {
                 upsertPlayer(c, p);
                 replaceInventory(c, p);
                 replaceAreas(c, p);
+                upsertStats(c, p);
                 c.commit();
             } catch (SQLException | RuntimeException e) {
                 c.rollback();
@@ -77,6 +78,17 @@ public class JdbcPlayerDAO implements PlayerDAO {
         }
     }
 
+    private void upsertStats(Connection c, Player p) throws SQLException {
+        String sql = "INSERT INTO player_stats (player_id, wrong_answers, deaths) VALUES (?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE wrong_answers = VALUES(wrong_answers), deaths = VALUES(deaths)";
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, p.getId());
+            ps.setInt(2, p.getWrongAnswers());
+            ps.setInt(3, p.getDeaths());
+            ps.executeUpdate();
+        }
+    }
+
     private void replaceAreas(Connection c, Player p) throws SQLException {
         try (PreparedStatement del = c.prepareStatement("DELETE FROM unlocked_areas WHERE player_id = ?")) {
             del.setInt(1, p.getId());
@@ -119,6 +131,15 @@ public class JdbcPlayerDAO implements PlayerDAO {
                         for (int i = 0; i < rs.getInt("quantity"); i++) {
                             p.getInventory().addItem(item);
                         }
+                    }
+                }
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "SELECT wrong_answers, deaths FROM player_stats WHERE player_id = ?")) {
+                ps.setInt(1, id);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) { // a save from before the score existed has no row: zeros
+                        p.restoreStats(rs.getInt("wrong_answers"), rs.getInt("deaths"));
                     }
                 }
             }

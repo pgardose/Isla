@@ -25,7 +25,7 @@ public final class TestDatabases {
         db.initializeSchema();
         try (Connection c = db.connection(); Statement st = c.createStatement()) {
             st.execute("SET FOREIGN_KEY_CHECKS=0");
-            for (String table : List.of("quest_options", "debug_quests", "shop_stock", "vendors", "inventory", "unlocked_areas",
+            for (String table : List.of("quest_options", "debug_quests", "shop_stock", "vendors", "inventory", "unlocked_areas", "player_stats",
                     "players", "quests", "items")) {
                 st.execute("TRUNCATE TABLE " + table);
             }
