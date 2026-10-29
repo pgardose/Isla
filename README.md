@@ -383,34 +383,35 @@ sequenceDiagram
 ```
 
 ### Sequence diagram: player buys an item
-
 ```mermaid
 sequenceDiagram
-  participant S as GameSession
-  participant V as Vendor
-  participant Sh as Shop
-  participant P as Player
-  participant I as Inventory
-  S->>V: interact(player)
-  V-->>S: InteractionResult.shop(greeting, shop)
-  Note over S: Screen = SHOP, player picks an item
-  S->>Sh: buyItem(player, item)
-  Sh->>P: spend(item.price)
-  alt not enough money
-    P-->>Sh: false
-    Sh-->>S: INSUFFICIENT_FUNDS
-  else enough money
-    P-->>Sh: true
-    Sh->>I: addItem(item)
-    alt inventory full
-      I-->>Sh: false
-      Sh->>P: earn(item.price) (refund)
-      Sh-->>S: INVENTORY_FULL
-    else added
-      I-->>Sh: true
-      Sh-->>S: SUCCESS (stock decreased)
-    end
-  end
+  autonumber
+  participant S@{ "type": "control" } as Game Session
+participant V@{ "type": "boundary" } as Vendor
+participant Sh@{ "type": "entity" } as Shop
+participant P@{ "type": "actor" } as Player
+participant I@{ "type": "entity" } as Inventory
+P->>S: press Z / interact key
+S->>V: interact(player)
+V-->>S: InteractionResult.shop(greeting, shop)
+Note over S: Screen = SHOP, player picks an item
+S->>Sh: buyItem(player, item)
+Sh->>P: spend(item.price)
+alt Not enough money
+P-->>Sh: false
+Sh-->>S: INSUFFICIENT_FUNDS
+else Enough money
+P-->>Sh: true
+Sh->>I: addItem(item)
+alt Inventory full
+I-->>Sh: false
+Sh->>P: earn(item.price) (refund)
+Sh-->>S: INVENTORY_FULL
+else Added
+I-->>Sh: true
+Sh-->>S: SUCCESS (stock decreased)
+end
+end
 ```
 
 ## Database
