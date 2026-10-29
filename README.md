@@ -329,25 +329,78 @@ The `PLAYING` state above is itself a small state machine: `Screen` decides how 
 Z, X and Q below are the actions Confirm, Cancel and Quests.
 
 ```mermaid
-stateDiagram-v2
-  [*] --> EXPLORING
-  EXPLORING --> DIALOGUE: Z next to a quest giver (talk, hand in an item)
-  EXPLORING --> SHOP: Z next to a vendor
-  EXPLORING --> DEBUG_PUZZLE: Z next to Coder Nia
-  EXPLORING --> INVENTORY: I
-  EXPLORING --> QUESTS: Q
-  DIALOGUE --> EXPLORING: Z / X
-  SHOP --> EXPLORING: X
-  INVENTORY --> EXPLORING: X / I
-  DEBUG_PUZZLE --> DIALOGUE: right answer (reward paid)
-  DEBUG_PUZZLE --> EXPLORING: X
-  QUESTS --> EXPLORING: Q / X / Z
-  DEBUG_PUZZLE --> ENDING: Elder Kai's last puzzle solved: the Idol is mended (once)
-  EXPLORING --> GAME_OVER: stamina reaches 0 while walking
-  DEBUG_PUZZLE --> GAME_OVER: a wrong fix's shock takes the last stamina
-  GAME_OVER --> [*]: Z (AppFlow loads the last save, full stamina) or X (main menu, nothing saved)
-  ENDING --> EXPLORING: Z (keep exploring)
-  ENDING --> [*]: X (AppFlow saves and shows the main menu)
+sequenceDiagram
+  autonumber
+  participant P@{ "type": "actor" } as Player
+participant S@{ "type": "control" } as Game Session
+participant Q@{ "type": "boundary" } as QuestGiver
+participant V@{ "type": "boundary" } as Vendor
+participant D@{ "type": "entity" } as DebugQuest
+participant A@{ "type": "control" } as AppFlow
+Note over S: Screen = EXPLORING
+alt Z next to a quest giver
+P->>S: press Z
+S->>Q: interact(player)
+Q-->>S: InteractionResult.dialogue
+Note over S: Screen = DIALOGUE
+P->>S: Z / X
+Note over S: Screen = EXPLORING
+else Z next to a vendor
+P->>S: press Z
+S->>V: interact(player)
+V-->>S: InteractionResult.shop
+Note over S: Screen = SHOP
+P->>S: X
+Note over S: Screen = EXPLORING
+else I (inventory)
+P->>S: press I
+Note over S: Screen = INVENTORY
+P->>S: X / I
+Note over S: Screen = EXPLORING
+else Q (quests)
+P->>S: press Q
+Note over S: Screen = QUESTS
+P->>S: Q / X / Z
+Note over S: Screen = EXPLORING
+else Z next to Coder Nia
+P->>S: press Z
+S->>D: interact(player)
+D-->>S: InteractionResult.puzzle
+Note over S: Screen = DEBUG_PUZZLE
+alt X (leave)
+P->>S: X
+Note over S: Screen = EXPLORING
+else Right answer
+P->>S: choose fix
+S->>D: answer(player, choice)
+D-->>S: true (reward paid)
+Note over S: Screen = DIALOGUE
+else Last puzzle solved (Idol mended, once)
+Note over S: Screen = ENDING
+alt Z (keep exploring)
+P->>S: Z
+Note over S: Screen = EXPLORING
+else X (main menu)
+P->>S: X
+S->>A: save and show main menu
+end
+else Wrong fix, shock takes last stamina
+S->>D: answer(player, choice)
+D-->>S: false
+Note over S: Screen = GAME_OVER
+end
+else Stamina reaches 0 while walking
+Note over S: Screen = GAME_OVER
+end
+opt Screen = GAME_OVER
+alt Z
+P->>S: Z
+S->>A: load last save (full stamina)
+else X
+P->>S: X
+S->>A: main menu (nothing saved)
+end
+end
 ```
 
 ### Sequence diagram: fixing a cursed code stone
