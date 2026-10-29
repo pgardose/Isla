@@ -6,9 +6,9 @@
 
   <groupId>edu.uic.isla</groupId>
   <artifactId>isla</artifactId>
-  <version>1.0.0</version>
+  <version>0.3.0</version>
   <name>Isla</name>
-  <description>Isla: The Broken Source. A 2D island mystery where you debug cursed code (Java OOP course project)</description>
+  <description>A 2D island trading adventure (Java OOP course project)</description>
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>

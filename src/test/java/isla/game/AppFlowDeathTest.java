@@ -77,23 +77,6 @@ class AppFlowDeathTest {
     }
 
     @Test
-    void aDeath_countsInTheScore_evenThoughTheDeadGameIsNotSaved() {
-        f.getSession().getPlayer().setPosition(20, 10);
-        f.handle(Action.CONFIRM); // checkpoint
-        f.handle(Action.CANCEL);
-        f.getSession().getPlayer().recordWrongAnswer(); // a mistake after the last save
-        die();
-        f.handle(Action.CONFIRM);
-        assertEquals(1, f.getSession().getPlayer().getDeaths());
-        assertEquals(1, f.getSession().getPlayer().getWrongAnswers());
-
-        die();
-        f.handle(Action.CANCEL); // to the menu this time
-        assertEquals(2, repos.players().findById(SeedData.PLAYER_ID).orElseThrow().getDeaths(),
-                "the second death is written into the save");
-    }
-
-    @Test
     void theDeadCannotPressSave() {
         die();
         f.handle(Action.SAVE);

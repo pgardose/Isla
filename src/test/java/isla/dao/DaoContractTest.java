@@ -248,21 +248,4 @@ abstract class DaoContractTest {
         assertTrue(quests.findById(2).isEmpty());
         assertTrue(quests.findAll().isEmpty());
     }
-
-    @Test
-    void playerStats_roundTrip_andDefaultToZero() {
-        items.save(SeedData.items().get(0));
-        Player p = new Player(1, "Pj", 50, 100, 6);
-        players.save(p);
-        assertEquals(0, players.findById(1).orElseThrow().getDeaths());
-        p.recordWrongAnswer();
-        p.recordWrongAnswer();
-        p.recordDeath();
-        players.save(p);
-        Player loaded = players.findById(1).orElseThrow();
-        assertEquals(2, loaded.getWrongAnswers());
-        assertEquals(1, loaded.getDeaths());
-        players.delete(1);
-        assertTrue(players.findById(1).isEmpty());
-    }
 }

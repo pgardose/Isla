@@ -49,7 +49,6 @@ public class AppFlow {
     private int confirmCursor;
     private String message = "";
     private String notice = "";
-    private boolean endingRecorded;
     private boolean quitRequested;
 
     /** settingsFile may be null, in which case settings are not written to disk. */
@@ -259,7 +258,6 @@ public class AppFlow {
             if (action == Action.CONFIRM) {
                 wakeUpAfterDeath();
             } else if (action == Action.CANCEL) {
-                recordDeathInSave(session.getPlayer());
                 session = null; // never save a dead game
                 enterMenu();
                 message = "You died. Your last save is kept.";
@@ -273,33 +271,7 @@ public class AppFlow {
             leaveIsland();
         } else {
             session.handle(action);
-            recordScoreIfFinished();
         }
-    }
-
-    /** The first time the ending screen shows in a session, offer its score as the best on this computer. */
-    private void recordScoreIfFinished() {
-        if (session.getScreen() != Screen.ENDING || endingRecorded) {
-            return;
-        }
-        endingRecorded = true;
-        if (settings.offerScore(session.getScore().points()) && settingsFile != null) {
-            try {
-                settings.save(settingsFile);
-            } catch (IOException e) {
-                System.err.println("Could not save the best score: " + e.getMessage());
-            }
-        }
-    }
-
-    /** Leaving from the death screen: the dead game is not saved, but the death still counts in the score. */
-    private void recordDeathInSave(isla.Player dead) {
-        repos.players().findById(SeedData.PLAYER_ID).ifPresent(saved -> {
-            if (GameBootstrap.hasSave(repos)) {
-                saved.restoreStats(dead.getWrongAnswers(), dead.getDeaths());
-                repos.players().save(saved);
-            }
-        });
     }
 
     private void leaveIsland() {
@@ -322,15 +294,9 @@ public class AppFlow {
 
     /** Back to the last save (or a new game if there is none), with full stamina so you cannot die again at once. */
     private void wakeUpAfterDeath() {
-        isla.Player dead = session.getPlayer();
         boolean saved = GameBootstrap.hasSave(repos);
         startPlaying(!saved);
         session.getPlayer().restoreStamina(session.getPlayer().getMaxStamina());
-        // The death and every mistake before it still count, even those made after the last save.
-        session.getPlayer().restoreStats(dead.getWrongAnswers(), dead.getDeaths());
-        if (settings.isAutosave()) {
-            GameBootstrap.save(repos, session);
-        }
         session.notice(saved ? "You wake up where you last saved, fully rested."
                 : "You had not saved yet, so your story starts over.");
     }
@@ -338,8 +304,6 @@ public class AppFlow {
     private void startPlaying(boolean newGame) {
         session = GameBootstrap.start(repos, newGame);
         session.setCheckpoints(settings.isAutosave());
-        session.setPreviousBest(settings.getBestScore());
-        endingRecorded = false;
         if (!notice.isEmpty()) {
             session.notice(notice);
         }
@@ -420,12 +384,6 @@ public class AppFlow {
         }
         glassPanel(r, 140, 214, 200, 20);
         r.drawText(150, 228, "Up/Down: choose    Z: select", GameSession.INK);
-        int best = settings.getBestScore();
-        if (best >= 0) {
-            String rank = Score.rankFor(best, best == Score.START);
-            glassPanel(r, 140, 238, 200, 20);
-            r.drawText(150, 252, "Best: rank " + rank + " (" + best + " points)", GameSession.INK);
-        }
     }
 
     private void renderHelp(Renderer r) {
@@ -440,9 +398,9 @@ public class AppFlow {
             "Q ... journal: goal, shards, clues     F5 ... save",
             "R ... Rest at a hut ($10). At 0 stamina you die!",
             "",
-            "! = shop  ? = needs you.  Broken glitch tiles sting: -2/step.",
+            "! = shop   ? = someone (or a stone) needs you.",
             "A wrong code fix shocks you: -10 stamina. Think first!",
-            "Score: 1000, -40 per wrong answer, -150 per death. Go for S!",
+            "Story steps save automatically (with autosave on).",
         };
         for (int i = 0; i < lines.length; i++) {
             r.drawText(46, 38 + i * 15, lines[i], GameSession.INK);

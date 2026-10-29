@@ -63,24 +63,6 @@ class AppFlowEndingTest {
     }
 
     @Test
-    void finishingTheStory_showsTheRank_andRemembersTheBestScore(@org.junit.jupiter.api.io.TempDir Path dir) {
-        Path file = dir.resolve("settings.properties");
-        f = new AppFlow(repos, Settings.load(file), file);
-        f.startNewGame();
-        reachTheEnding();
-        RecordingRenderer r = new RecordingRenderer();
-        f.render(r);
-        assertTrue(r.anyTextContains("RANK S"), String.valueOf(r.texts));
-        assertTrue(r.anyTextContains("first finished story"));
-        assertEquals(1000, Settings.load(file).getBestScore());
-
-        f.handle(Action.CANCEL); // back to the menu: it shows the best
-        RecordingRenderer menu = new RecordingRenderer();
-        f.render(menu);
-        assertTrue(menu.anyTextContains("Best: rank S"), String.valueOf(menu.texts));
-    }
-
-    @Test
     void endingScreen_z_keepsExploring_inTheSameGame() {
         reachTheEnding();
         f.handle(Action.CONFIRM);

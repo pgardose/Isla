@@ -71,25 +71,6 @@ public class GameWorld {
         return Optional.empty();
     }
 
-    /**
-     * True if the player stands next to a cursed tile that is still broken (a glitched bridge, red vines). The
-     * static stings: GameSession takes extra stamina for every step taken there. Fixing the stone ends it.
-     */
-    public boolean playerNextToActiveGlitch() {
-        int[][] dirs = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
-        for (int[] d : dirs) {
-            int x = player.getX() + d[0];
-            int y = player.getY() + d[1];
-            if (map.inBounds(x, y)) {
-                TileType t = map.tileAt(x, y);
-                if (t.isGlitch() && !player.hasUnlocked(t.getRequiredArea())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     /** True if the player stands next to a hut (up, down, left or right): a shady place to rest. */
     public boolean playerNextToHut() {
         int[][] dirs = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};

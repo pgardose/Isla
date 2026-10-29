@@ -25,13 +25,5 @@ world (a bridge appears, a village wakes, jungle withers) and turns up shards an
 - Wrong code fix: -10 stamina. Walking: 1 stamina per 4 steps. Rest only next to a hut, or when collapsed (+25).
 - Objective strip, journal (Q), paged dialogue.
 
-## Danger and replay (added later the same day)
-- Death at 0 stamina (walking, glitch static, a wrong fix's shock); wake at the last save with full stamina; the dead
-  game is never saved; checkpoints after every story step.
-- Resting costs $10 at a hut and is impossible in the open.
-- Glitch hazards: each step next to a broken glitch tile costs 2 extra stamina, until its stone is fixed.
-- Score: 1000, -40 per wrong answer, -150 per death; ranks S/A/B/C/D; stats saved in `player_stats` and carried
-  across death; best score remembered in `settings.properties` and shown on the menu.
-
 ## Non-goals
 Combat, new save tables, continuing saves from the old story.

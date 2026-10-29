@@ -17,7 +17,7 @@ import java.util.TreeMap;
 public class InMemoryPlayerDAO implements PlayerDAO {
 
     private record Row(String name, int money, int stamina, int x, int y,
-                       List<Integer> itemIds, Set<String> areas, int wrongAnswers, int deaths) {
+                       List<Integer> itemIds, Set<String> areas) {
     }
 
     private final ItemDAO items;
@@ -34,7 +34,7 @@ public class InMemoryPlayerDAO implements PlayerDAO {
             ids.add(item.getId());
         }
         store.put(p.getId(), new Row(p.getName(), p.getMoney(), p.getStamina(), p.getX(), p.getY(),
-                ids, new HashSet<>(p.getUnlockedAreas()), p.getWrongAnswers(), p.getDeaths()));
+                ids, new HashSet<>(p.getUnlockedAreas())));
     }
 
     @Override
@@ -62,7 +62,6 @@ public class InMemoryPlayerDAO implements PlayerDAO {
                     () -> new IllegalStateException("Saved inventory refers to unknown item " + itemId)));
         }
         row.areas().forEach(p::unlockArea);
-        p.restoreStats(row.wrongAnswers(), row.deaths());
         return p;
     }
 }
