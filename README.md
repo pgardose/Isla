@@ -1,6 +1,6 @@
 # Isla: A 2D Island Trading Adventure
 
-Java OOP course project (UIC, College of Computing College): a GBA-style top-down island game.
+Java OOP course project (UIC, College of Computer Studies): a GBA-style top-down island game.
 Walk around a tile-based island, buy items from vendors on a limited budget, manage a capacity-limited
 inventory, help the islanders with quests and debug broken code to earn money. Progress is saved to a built-in
 database (no setup), or to MySQL if you prefer.
@@ -217,44 +217,93 @@ gives them the animated and pixel-art look.
 
 ```mermaid
 classDiagram
-  class Entity { <<abstract>> #int x #int y #String sprite +update() +render(Renderer)* }
-  class Player { -int id -int money -int stamina -Inventory inventory +move(dx,dy) +spend(amount) boolean +earn(amount) +unlockArea(String) +isExhausted() boolean }
-  class NPC { <<abstract>> -String dialogue +interact(Player)* InteractionResult }
-  class Vendor { -int id -String name -Shop shop +interact(Player) InteractionResult }
-  class QuestGiver { -int npcId -List~Stage~ stages +currentStage() Optional~Stage~ +doneTextFor(Quest) String +interact(Player) InteractionResult }
-  class Interactable { <<interface>> +interact(Player) InteractionResult }
-  class Item { <<abstract>> -int id -String name -int price +use(Player)* String +getCategory()* ItemCategory +getUnusableReason(Player) String +isConsumedOnUse() boolean }
-  class Consumable { -int staminaRestore }
-  class Tool { -String unlocksArea }
+  direction TB
+
+  class Entity {
+    <<abstract>>
+    #x, y
+    +update()
+    +render(Renderer)*
+  }
+  class Player {
+    -money
+    -stamina
+    +move(dx, dy)
+    +spend(amount) boolean
+    +earn(amount)
+  }
+  class NPC {
+    <<abstract>>
+    +interact(Player)* InteractionResult
+  }
+  class Vendor
+  class QuestGiver
+  class Interactable {
+    <<interface>>
+    +interact(Player) InteractionResult
+  }
+
+  class Item {
+    <<abstract>>
+    -name
+    -price
+    +use(Player)* String
+  }
+  class Consumable {
+    -staminaRestore
+  }
+  class Tool {
+    -unlocksArea
+  }
   class Souvenir
-  class Inventory { -List~Item~ items -int capacity +addItem(Item) boolean +removeItem(Item) boolean +countOf(Item) int }
-  class Shop { -Map~Item,Integer~ stock +addStock(Item,int) +buyItem(Player,Item) PurchaseResult }
-  class Quest { -int id -String description -int reward -String requiredItemName -List~String~ grantedFlags +grants(String...) +complete(Player) boolean +interact(Player,String) InteractionResult }
-  class DebugQuest { -String snippet -List~String~ options -int correctIndex -List~String~ feedback +answer(Player,int) boolean +feedbackFor(int) String +getHeading() String +wrongAnswerStaminaCost() int }
-  class GatherQuest { -List~String~ requiredFlags +progress(Player) int +isCompletable(Player) boolean }
-  class Accusation { +getHeading() String +wrongAnswerStaminaCost() int }
-  class Journey { -List~Chapter~ chapters +objectiveText() String +partText() String +completedCount() int }
-  class InteractionResult { <<value>> kind: DIALOGUE or SHOP or PUZZLE or ENDING text shop puzzle }
-  class Renderer { <<interface>> +setCamera() +drawTile() +drawSprite() +drawLabel() +fillRect() +drawText() +setFrame() +drawPanel() }
+  class Inventory {
+    -capacity
+    +addItem(Item) boolean
+    +removeItem(Item) boolean
+  }
+  class Shop {
+    -stock
+    +buyItem(Player, Item) PurchaseResult
+  }
+
+  class Quest {
+    -description
+    -reward
+    +complete(Player) boolean
+  }
+  class GatherQuest {
+    +progress(Player) int
+  }
+  class DebugQuest {
+    -snippet
+    -options
+    +answer(Player, int) boolean
+  }
+  class Accusation
+  class Journey {
+    +completedCount() int
+  }
+
   Entity <|-- Player
   Entity <|-- NPC
   NPC <|-- Vendor
   NPC <|-- QuestGiver
   Interactable <|.. Vendor
   Interactable <|.. QuestGiver
+
   Item <|-- Consumable
   Item <|-- Tool
   Item <|-- Souvenir
-  Player "1" --> "1" Inventory
-  Vendor "1" --> "1" Shop
-  Shop "1" --> "*" Item : stock
-  QuestGiver "1" --> "1..*" Quest : stages
-  Quest <|-- DebugQuest
+  Player --> Inventory : carries
+  Inventory o-- Item
+  Vendor --> Shop : runs
+  Shop o-- Item : sells
+
   Quest <|-- GatherQuest
+  Quest <|-- DebugQuest
   DebugQuest <|-- Accusation
-  Journey "1" --> "*" Quest : chapters
-  Entity ..> Renderer : draws with
-  Interactable ..> InteractionResult : returns
+  QuestGiver --> Quest : stages
+  Journey --> Quest : chapters
 ```
 
 ### State diagram: app flow (main menu)
