@@ -15,6 +15,10 @@ public class DebugQuest extends Quest {
     private final String snippet;
     private final List<String> options;
     private final int correctIndex;
+    private List<String> feedback = List.of();
+
+    /** Stamina lost on a wrong fix: a cursed stone gives you a little glitch shock. */
+    public static final int WRONG_FIX_STAMINA = 10;
 
     public DebugQuest(int id, int giverNpcId, String description, int reward,
                       String snippet, List<String> options, int correctIndex) {
@@ -41,6 +45,36 @@ public class DebugQuest extends Quest {
 
     public int getCorrectIndex() {
         return correctIndex;
+    }
+
+    /**
+     * Sets one explanation per option (same order as the options), shown when that option is picked
+     * wrongly, so a mistake teaches something. Returns this, for chaining.
+     */
+    public DebugQuest withFeedback(List<String> perOption) {
+        if (perOption.size() != options.size()) {
+            throw new IllegalArgumentException("Feedback needs one line per option");
+        }
+        this.feedback = java.util.Collections.unmodifiableList(new java.util.ArrayList<>(perOption)); // nulls allowed
+        return this;
+    }
+
+    /** Why this option is wrong, or a general nudge when the puzzle has no feedback written for it. */
+    public String feedbackFor(int choice) {
+        if (choice >= 0 && choice < feedback.size() && feedback.get(choice) != null) {
+            return feedback.get(choice);
+        }
+        return "Not quite. Read the line again and try another fix.";
+    }
+
+    /** Title of the puzzle panel. OOP note (POLYMORPHISM): an Accusation shows its own heading. */
+    public String getHeading() {
+        return "DEBUG: pick the fix";
+    }
+
+    /** What a wrong pick costs. A code fix shocks you; Accusation overrides this. */
+    public int wrongAnswerStaminaCost() {
+        return WRONG_FIX_STAMINA;
     }
 
     /**

@@ -178,7 +178,7 @@ final class JavaFxRenderer implements Renderer {
     }
 
     private Image tileImage(TileKind kind, int col, int row) {
-        int water = kind == TileKind.WATER ? TileTexture.waterFrame(frame) : 0; // only water animates
+        int water = kind.isAnimated() ? TileTexture.waterFrame(frame) : 0; // sea and cursed tiles animate
         long key = ((long) kind.ordinal() << 40) | ((long) water << 36) | ((long) (col & 0xFFFF) << 16) | (row & 0xFFFF);
         Image image = tileImages.get(key);
         if (image == null) {

@@ -16,8 +16,23 @@ import java.util.Optional;
  */
 public class QuestGiver extends NPC implements Interactable {
 
-    /** One step: the quest, what the giver says while it is open, and the one-line goal shown in the quest list. */
-    public record Stage(Quest quest, String dialogue, String goal) {
+    /**
+     * One step: the quest, what the giver says while it is open, and the one-line goal shown in the quest list.
+     * Optionally: a story flag the player needs before this stage can be attempted (requiresFlag) and what is said
+     * until then (lockedText), and what is said the moment the stage is completed (doneText, null = the quest's
+     * own line).
+     */
+    public record Stage(Quest quest, String dialogue, String goal, String requiresFlag, String lockedText,
+                        String doneText) {
+
+        public Stage(Quest quest, String dialogue, String goal) {
+            this(quest, dialogue, goal, null, null, null);
+        }
+
+        /** True if the player may attempt this stage now. */
+        public boolean isOpenFor(Player player) {
+            return requiresFlag == null || player.hasUnlocked(requiresFlag);
+        }
     }
 
     private final int npcId;
@@ -82,6 +97,22 @@ public class QuestGiver extends NPC implements Interactable {
         return this;
     }
 
+    /** True if this giver's last quest ends the story. */
+    public boolean isFinale() {
+        return finale;
+    }
+
+    /** True once every quest this giver hands out is done. */
+    public boolean isFinished() {
+        return currentStage().isEmpty();
+    }
+
+    /** The line for a quest of this giver that was just completed: its stage's doneText, or the quest's own line. */
+    public String doneTextFor(Quest quest) {
+        return stages.stream().filter(s -> s.quest() == quest && s.doneText() != null)
+                .map(Stage::doneText).findFirst().orElse(quest.completionText());
+    }
+
     @Override
     public InteractionResult interact(Player player) {
         Stage stage = currentStage().orElse(null);
@@ -92,9 +123,16 @@ public class QuestGiver extends NPC implements Interactable {
             Stage last = stages.get(stages.size() - 1);
             return last.quest().interact(player, last.dialogue());
         }
+        if (!stage.isOpenFor(player)) {
+            return InteractionResult.dialogue(stage.lockedText() != null ? stage.lockedText() : stage.dialogue());
+        }
         InteractionResult result = stage.quest().interact(player, stage.dialogue());
+        boolean justCompleted = stage.quest().isCompleted(); // it was open before this call
+        if (justCompleted && stage.doneText() != null && result.getKind() == InteractionResult.Kind.DIALOGUE) {
+            result = InteractionResult.dialogue(stage.doneText());
+        }
         boolean isLastStage = stage == stages.get(stages.size() - 1);
-        if (finale && isLastStage && stage.quest().isCompleted()) {
+        if (finale && isLastStage && justCompleted) {
             return InteractionResult.ending(result.getText());
         }
         return result;

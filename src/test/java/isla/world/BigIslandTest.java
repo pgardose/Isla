@@ -69,30 +69,42 @@ class BigIslandTest {
         assertTrue(south, "no walkable land south of the old island");
     }
 
+    private static final Set<String> ALL = Set.of("Jungle Path", "East Bridge", "South Bridge", "Overgrowth Cleared");
+
     @Test
-    void almostAllLandIsOpenFromTheStart_onlyYarasJunglePocketNeedsTheMachete() {
-        int open = 0;
-        int needsTool = 0;
+    void atTheStart_onlyTheHomeIslandIsOpen_theBridgesAreGlitched() {
         boolean[][] seen = reachable(Set.of());
         for (int y = 0; y < island.getHeight(); y++) {
             for (int x = 0; x < island.getWidth(); x++) {
-                if (island.canWalk(x, y, Set.of("Jungle Path"))) {
-                    if (seen[y][x]) open++; else needsTool++;
+                if (seen[y][x]) {
+                    assertTrue(x < 40 && y < 27, "(" + x + "," + y + ") should be locked at the start");
                 }
             }
         }
-        assertTrue(needsTool <= 100, "too much land is locked behind the jungle: " + needsTool + " tiles");
-        assertTrue(open >= 1600, "open land: " + open);
     }
 
     @Test
-    void everyJungleTileIsReachable_onceTheMacheteIsUsed() {
-        Set<String> withMachete = Set.of("Jungle Path");
-        boolean[][] seen = reachable(withMachete);
+    void fixingTheShrineOpensTheVillage_butNotTheSouth() {
+        boolean[][] seen = reachable(Set.of("Jungle Path", "East Bridge"));
+        assertTrue(seen[13][61], "the village crossroads");
+        assertFalse(seen[40][40], "the south island stays shut until the south bridge is fixed");
+    }
+
+    @Test
+    void theTempleClearing_needsTheOvergrowthCleared() {
+        Set<String> beforeVines = Set.of("Jungle Path", "East Bridge", "South Bridge");
+        assertTrue(reachable(beforeVines)[40][40], "the south island");
+        assertFalse(reachable(beforeVines)[44][54], "the temple clearing is behind the vines");
+        assertTrue(reachable(ALL)[44][54]);
+    }
+
+    @Test
+    void withEveryStoneFixed_everyWalkableTileCanBeReached() {
+        boolean[][] seen = reachable(ALL);
         for (int y = 0; y < island.getHeight(); y++) {
             for (int x = 0; x < island.getWidth(); x++) {
-                if (island.canWalk(x, y, withMachete)) {
-                    assertTrue(seen[y][x], "cannot walk to (" + x + "," + y + ") even with the machete");
+                if (island.canWalk(x, y, ALL)) {
+                    assertTrue(seen[y][x], "cannot walk to (" + x + "," + y + ") even with every stone fixed");
                 }
             }
         }

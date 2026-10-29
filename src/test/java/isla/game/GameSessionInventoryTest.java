@@ -121,16 +121,34 @@ class GameSessionInventoryTest {
 
     @Test
     void rest_restoresStaminaCapped() {
-        GameSession s = TestSessions.fresh();
-        s.getPlayer().expendStamina(5);
+        GameSession s = TestSessions.at(21, 8); // next to the hut above Elder Kai
+        s.getPlayer().expendStamina(60);
         s.handle(Action.REST);
         assertEquals(100, s.getPlayer().getStamina());
+        assertTrue(s.getMessage().contains("hut"), s.getMessage());
         s.handle(Action.REST);
-        assertEquals("You are not tired.", s.getMessage());
+        assertEquals("You are already well rested.", s.getMessage());
+    }
+
+    @Test
+    void rest_outInTheOpen_onlyWorksOnceYouCollapse() {
+        GameSession s = TestSessions.fresh(); // spawn: open grass, no hut
         s.getPlayer().expendStamina(50);
         s.handle(Action.REST);
-        assertEquals(60, s.getPlayer().getStamina());
-        assertEquals("You catch your breath.", s.getMessage());
+        assertEquals(50, s.getPlayer().getStamina(), "no free naps in the open");
+        assertTrue(s.getMessage().contains("No shade"), s.getMessage());
+        s.handle(Action.REST);
+        s.getPlayer().expendStamina(50);
+        s.handle(Action.REST);
+        assertEquals(GameSession.REST_AMOUNT, s.getPlayer().getStamina());
+        assertTrue(s.getMessage().contains("collapse"), s.getMessage());
+    }
+
+    @Test
+    void rest_whenNotTired_saysSo() {
+        GameSession s = TestSessions.fresh();
+        s.handle(Action.REST);
+        assertEquals("You are not tired.", s.getMessage());
     }
 
     @Test

@@ -13,8 +13,12 @@ import java.util.Optional;
  */
 public final class Journey {
 
-    /** One step of the story. */
-    public record Chapter(Quest quest, String objective) {
+    /** One step of the story: its quest, the "what to do next" line, and the chapter it belongs to. */
+    public record Chapter(Quest quest, String objective, String part) {
+
+        public Chapter(Quest quest, String objective) {
+            this(quest, objective, null);
+        }
     }
 
     private final String title;
@@ -51,6 +55,15 @@ public final class Journey {
         return chapters.stream()
                 .filter(c -> !c.quest().isCompleted())
                 .findFirst();
+    }
+
+    /** The chapter name of the current step ("Chapter 2: ..."), or the journey title once it is complete. */
+    public String partText() {
+        return current().map(Chapter::part).filter(p -> p != null).orElse(title);
+    }
+
+    public List<Chapter> getChapters() {
+        return chapters;
     }
 
     /** The one-line hint to show: the next objective, or the closing line once everything is done. */

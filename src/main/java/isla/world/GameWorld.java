@@ -71,6 +71,19 @@ public class GameWorld {
         return Optional.empty();
     }
 
+    /** True if the player stands next to a hut (up, down, left or right): a shady place to rest. */
+    public boolean playerNextToHut() {
+        int[][] dirs = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+        for (int[] d : dirs) {
+            int x = player.getX() + d[0];
+            int y = player.getY() + d[1];
+            if (map.inBounds(x, y) && map.tileAt(x, y) == TileType.HUT) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Draws the visible part of the island, then NPCs, then the player on top. */
     public void render(Renderer renderer, int viewCols, int viewRows) {
         int camCol = clamp(player.getX() - viewCols / 2, 0, Math.max(0, map.getWidth() - viewCols));
@@ -79,7 +92,7 @@ public class GameWorld {
 
         for (int y = camRow; y < camRow + viewRows && y < map.getHeight(); y++) {
             for (int x = camCol; x < camCol + viewCols && x < map.getWidth(); x++) {
-                renderer.drawTile(x, y, map.tileAt(x, y).getColor());
+                renderer.drawTile(x, y, map.tileAt(x, y).colorFor(player.getUnlockedAreas()));
             }
         }
         for (NPC npc : npcs) {

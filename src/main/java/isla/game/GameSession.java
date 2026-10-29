@@ -4,6 +4,7 @@ import isla.DebugQuest;
 import isla.InteractionResult;
 import isla.Item;
 import isla.ItemCategory;
+import isla.Journey;
 import isla.NPC;
 import isla.Player;
 import isla.PurchaseResult;
@@ -34,8 +35,11 @@ public class GameSession {
     public static final int SCREEN_HEIGHT = VIEW_ROWS * TILE_SIZE;  // 272
 
     /** The closing story shown on the ending screen (wrapped to fit). */
-    static final String ENDING_STORY = "Elder Kai holds the Golden Idol up to the light and smiles. "
-            + "\"The island remembers its treasures again,\" he says. Thanks to you, Isla is at peace.";
+    static final String ENDING_STORY = "The shards lock together with a sound like a bell. The east bridge stands"
+            + " solid, the village laughs again and the south jungle settles back to sleep. Nia starts teaching"
+            + " the island's children to read the old code, carefully this time. Elder Kai sets the mended Idol"
+            + " in its shrine. \"An island runs on its code,\" he says, \"but it is kept by people who tell the"
+            + " truth.\"";
 
     // UI colours. They are the isla.ui.Palette colours (this package may not import isla.ui, so the
     // hex codes are repeated here; PaletteMatchesGameColoursTest fails if they ever drift apart).
@@ -50,12 +54,18 @@ public class GameSession {
     static final String BAR_BACK = "#2B1D0E";   // Palette.INK
     static final String BAR_FILL = "#7BC96F";   // Palette.GRASS
     private static final int WRAP_CHARS = 76;
-    static final int REST_AMOUNT = 10;
+    /** Lines in one page of the dialogue box. */
+    static final int PAGE_LINES = 3;
+    /** Stamina back when the player collapses away from a hut (resting by a hut restores it all). */
+    static final int REST_AMOUNT = 25;
 
     private final GameWorld world;
     private Screen screen = Screen.EXPLORING;
     private String message = "";
     private String dialogueText = "";
+    private int dialoguePage;
+    private Journey journey;
+    private QuestGiver activeGiver;
     private Shop activeShop;
     private int shopCursor;
     private DebugQuest activePuzzle;
@@ -66,6 +76,25 @@ public class GameSession {
 
     public GameSession(GameWorld world) {
         this.world = world;
+    }
+
+    /** The main story, for the objective strip and the journal (null in bare test worlds). */
+    public Journey getJourney() {
+        return journey;
+    }
+
+    public void setJourney(Journey journey) {
+        this.journey = journey;
+    }
+
+    /** Which page of a long dialogue is showing (0 = the first). */
+    public int getDialoguePage() {
+        return dialoguePage;
+    }
+
+    /** How many pages the current dialogue has. */
+    public int dialoguePageCount() {
+        return Math.max(1, (wrap(dialogueText, WRAP_CHARS).size() + PAGE_LINES - 1) / PAGE_LINES);
     }
 
     public GameWorld getWorld() {
@@ -126,20 +155,70 @@ public class GameSession {
         int total = 0;
         int done = 0;
         int earned = 0;
+        int stones = 0;
+        int stonesFixed = 0;
         for (NPC npc : world.getNpcs()) {
             if (npc instanceof QuestGiver giver) {
+                boolean stone = "stone_sprite".equals(giver.getSprite());
                 for (Quest q : giver.getQuests()) {
                     total++;
+                    if (stone) {
+                        stones++;
+                    }
                     if (q.isCompleted()) {
                         done++;
                         earned += q.getReward();
+                        if (stone) {
+                            stonesFixed++;
+                        }
                     }
                 }
             }
         }
-        return List.of("Quests completed: " + done + " of " + total,
-                "Money earned from quests: $" + earned,
-                "Money in hand: $" + getPlayer().getMoney());
+        List<String> lines = new ArrayList<>();
+        if (stones > 0) {
+            lines.add("Cursed stones repaired: " + stonesFixed + " of " + stones);
+            lines.add("Clues found: " + cluesFound().size() + " of " + SeedData.CLUES.size());
+        }
+        lines.add("Quests completed: " + done + " of " + total);
+        lines.add("Money earned from quests: $" + earned + "   Money in hand: $" + getPlayer().getMoney());
+        return lines;
+    }
+
+    /** Journal lines for the clues the player has found, in story order. */
+    public List<String> cluesFound() {
+        List<String> found = new ArrayList<>();
+        SeedData.CLUES.forEach((flag, text) -> {
+            if (getPlayer().hasUnlocked(flag)) {
+                found.add(text);
+            }
+        });
+        return found;
+    }
+
+    /** Names of the shards found so far ("Sun", "Moon", "Sea"), in story order. */
+    public List<String> shardsFound() {
+        List<String> found = new ArrayList<>();
+        SeedData.SHARDS.forEach((flag, name) -> {
+            if (getPlayer().hasUnlocked(flag)) {
+                found.add(name);
+            }
+        });
+        return found;
+    }
+
+    /** Side goals the player can do right now (Nia, the villagers), for the journal. */
+    public List<String> sideGoals() {
+        List<String> goals = new ArrayList<>();
+        for (NPC npc : world.getNpcs()) {
+            if (npc instanceof QuestGiver g && !g.isFinale() && !"stone_sprite".equals(g.getSprite())) {
+                g.currentStage().filter(st -> st.isOpenFor(getPlayer()))
+                        .filter(st -> journey == null || journey.getChapters().stream()
+                                .noneMatch(c -> c.quest() == st.quest()))
+                        .ifPresent(st -> goals.add(st.goal()));
+            }
+        }
+        return goals;
     }
 
     /** Sets what the SAVE action does; the handler returns the message to show. */
@@ -214,6 +293,8 @@ public class GameSession {
         }
         InteractionResult result = npc.interact(getPlayer());
         dialogueText = result.getText();
+        dialoguePage = 0;
+        activeGiver = npc instanceof QuestGiver g ? g : null;
         switch (result.getKind()) {
             case SHOP -> {
                 activeShop = result.getShop();
@@ -250,8 +331,11 @@ public class GameSession {
 
     // ---- dialogue ----
 
+    /** Z turns the page (or closes on the last one); X closes at once. */
     private void handleDialogue(Action action) {
-        if (action == Action.CONFIRM || action == Action.CANCEL) {
+        if (action == Action.CONFIRM && dialoguePage + 1 < dialoguePageCount()) {
+            dialoguePage++;
+        } else if (action == Action.CONFIRM || action == Action.CANCEL) {
             screen = Screen.EXPLORING;
         }
     }
@@ -312,14 +396,30 @@ public class GameSession {
         }
     }
 
+    /**
+     * A right answer completes the quest (paying it and setting its story flags, which is what opens bridges and
+     * hands over shards) and shows the giver's line for it; finishing the finale giver shows the ending. A wrong
+     * answer explains itself and, for a code fix, costs a little stamina.
+     */
     private void submitPuzzleAnswer() {
         DebugQuest puzzle = activePuzzle;
-        if (puzzle.answer(getPlayer(), puzzleCursor)) {
-            dialogueText = "That fixed it! Here is $" + puzzle.getReward() + " for your trouble.";
+        Player p = getPlayer();
+        if (puzzle.answer(p, puzzleCursor)) {
+            String text = activeGiver != null ? activeGiver.doneTextFor(puzzle)
+                    : "That fixed it! Here is $" + puzzle.getReward() + " for your trouble.";
+            if (puzzle.getReward() > 0 && !text.contains("$")) {
+                text += " (+$" + puzzle.getReward() + ")";
+            }
+            dialogueText = text;
+            dialoguePage = 0;
+            boolean ending = activeGiver != null && activeGiver.isFinale() && activeGiver.isFinished();
             closePuzzle();
-            screen = Screen.DIALOGUE;
+            screen = ending ? Screen.ENDING : Screen.DIALOGUE;
         } else {
-            message = "Not quite. Read the line again and try another fix.";
+            int cost = Math.min(puzzle.wrongAnswerStaminaCost(), p.getStamina());
+            p.expendStamina(cost);
+            message = puzzle.feedbackFor(puzzleCursor)
+                    + (cost > 0 ? " Glitch shock! -" + cost + " stamina." : "");
         }
     }
 
@@ -340,14 +440,28 @@ public class GameSession {
 
     // ---- rest ----
 
+    /**
+     * Resting needs shade: next to a hut you sleep and wake fully rested. Out in the open you can only rest once
+     * you are completely exhausted (you collapse and get a little back), so walking far without food matters,
+     * but you can never get stuck.
+     */
     private void rest() {
         Player p = getPlayer();
-        if (p.getStamina() >= p.getMaxStamina()) {
+        if (world.playerNextToHut()) {
+            if (p.getStamina() >= p.getMaxStamina()) {
+                message = "You are already well rested.";
+                return;
+            }
+            p.restoreStamina(p.getMaxStamina());
+            message = "You nap in the shade of the hut. Stamina fully restored!";
+        } else if (p.isExhausted()) {
+            p.restoreStamina(REST_AMOUNT);
+            message = "You collapse on the ground and sleep it off (+" + REST_AMOUNT + "). A hut would be comfier.";
+        } else if (p.getStamina() >= p.getMaxStamina()) {
             message = "You are not tired.";
-            return;
+        } else {
+            message = "No shade here. Rest next to a hut, or eat something (I).";
         }
-        p.restoreStamina(REST_AMOUNT);
-        message = "You catch your breath.";
     }
 
     // ---- inventory ----
@@ -411,6 +525,7 @@ public class GameSession {
         world.render(r, VIEW_COLS, VIEW_ROWS);
         if (screen == Screen.EXPLORING || screen == Screen.DIALOGUE) {
             renderHud(r); // shop and inventory panels show their own money/capacity
+            renderObjective(r);
         }
         switch (screen) {
             case EXPLORING -> {
@@ -418,7 +533,7 @@ public class GameSession {
                     renderMessageBox(r, message);
                 }
             }
-            case DIALOGUE -> renderDialogueBox(r, wrap(dialogueText, WRAP_CHARS), "Z: close");
+            case DIALOGUE -> renderDialoguePage(r);
             case SHOP -> renderShop(r);
             case INVENTORY -> renderInventory(r);
             case DEBUG_PUZZLE -> renderPuzzle(r);
@@ -427,31 +542,89 @@ public class GameSession {
         }
     }
 
-    private void renderQuestList(Renderer r) {
-        r.drawPanel(20, 12, 440, 112, PAPER, BORDER);
-        r.drawText(30, 32, "QUESTS", INK);
-        List<String> lines = questLines();
-        for (int i = 0; i < lines.size(); i++) {
-            String label = i == 0 ? "Goal: " : "Side: ";
-            r.drawText(30, 56 + i * 18, label + lines.get(i), INK);
+    private void renderDialoguePage(Renderer r) {
+        List<String> lines = wrap(dialogueText, WRAP_CHARS);
+        int from = Math.min(dialoguePage * PAGE_LINES, Math.max(0, lines.size() - 1));
+        List<String> page = lines.subList(from, Math.min(lines.size(), from + PAGE_LINES));
+        int pages = dialoguePageCount();
+        String hint = dialoguePage + 1 < pages
+                ? "Z: next (" + (dialoguePage + 1) + "/" + pages + ")   X: skip" : "Z: close";
+        renderDialogueBox(r, page, hint);
+    }
+
+    /** The "what now?" strip at the top of the screen, so the player always knows the next step. */
+    private void renderObjective(Renderer r) {
+        if (journey == null) {
+            return;
         }
-        r.drawText(30, 112, "Q or X: close", BORDER);
+        r.drawPanel(128, 4, 348, 20, HUD_FILL, BORDER);
+        r.drawText(134, 17, journey.objectiveText(), GOLD);
+    }
+
+    /** The journal (Q): chapter, goal, shards, clues and side goals; a plain quest list in bare test worlds. */
+    private void renderQuestList(Renderer r) {
+        if (journey == null) {
+            r.drawPanel(20, 12, 440, 112, PAPER, BORDER);
+            r.drawText(30, 32, "QUESTS", INK);
+            List<String> lines = questLines();
+            for (int i = 0; i < lines.size(); i++) {
+                String label = i == 0 ? "Goal: " : "Side: ";
+                r.drawText(30, 56 + i * 18, label + lines.get(i), INK);
+            }
+            r.drawText(30, 112, "Q or X: close", BORDER);
+            return;
+        }
+        r.drawPanel(20, 8, 440, 256, PAPER, BORDER);
+        r.drawText(30, 26, "JOURNAL - " + journey.partText(), INK);
+        r.drawText(30, 44, "Goal: " + journey.objectiveText(), MONEY_INK);
+
+        List<String> shards = shardsFound();
+        r.drawText(30, 64, "Idol shards (" + shards.size() + " of " + SeedData.SHARDS.size() + "):", INK);
+        int sx = 190;
+        for (String name : SeedData.SHARDS.values()) {
+            boolean have = shards.contains(name);
+            r.fillRect(sx, 54, 74, 14, have ? GOLD : BORDER);
+            r.fillRect(sx + 2, 56, 70, 10, have ? GOLD : PAPER);
+            r.drawText(sx + 8, 65, have ? name : "?", INK);
+            sx += 82;
+        }
+
+        r.drawText(30, 88, "Clues", INK);
+        List<String> clues = cluesFound();
+        if (clues.isEmpty()) {
+            r.drawText(40, 104, "None yet. Fix stones and talk to people.", BORDER);
+        }
+        for (int i = 0; i < clues.size(); i++) {
+            r.drawText(40, 104 + i * 14, "- " + clues.get(i), INK);
+        }
+
+        int y = 104 + Math.max(1, clues.size()) * 14 + 12;
+        List<String> side = sideGoals();
+        if (!side.isEmpty()) {
+            r.drawText(30, y, "Side", INK);
+            for (int i = 0; i < side.size() && i < 3; i++) {
+                r.drawText(40, y + 16 + i * 14, "- " + side.get(i), INK);
+            }
+        }
+        r.drawText(30, 254, "Story progress: " + journey.completedCount() + " of " + journey.size()
+                + " steps    Q or X: close", BORDER);
     }
 
     private void renderEnding(Renderer r) {
-        r.drawPanel(20, 12, 440, 248, PAPER, BORDER);
-        r.drawText(214, 36, "THE END", INK);
-        List<String> story = wrap(ENDING_STORY, 66);
+        r.drawPanel(20, 8, 440, 256, PAPER, BORDER);
+        r.drawText(214, 28, "THE END", INK);
+        List<String> story = wrap(ENDING_STORY, 68);
         for (int i = 0; i < story.size(); i++) {
-            r.drawText(34, 62 + i * 14, story.get(i), INK);
+            r.drawText(34, 48 + i * 13, story.get(i), INK);
         }
-        r.drawText(34, 132, "Your story", MONEY_INK);
+        int y = 48 + story.size() * 13 + 10;
+        r.drawText(34, y, "Your story", MONEY_INK);
         List<String> summary = endingSummary();
         for (int i = 0; i < summary.size(); i++) {
-            r.drawText(46, 152 + i * 16, summary.get(i), INK);
+            r.drawText(46, y + 16 + i * 14, summary.get(i), INK);
         }
-        r.drawText(34, 224, "Z: keep exploring", INK);
-        r.drawText(34, 242, "X: back to the main menu (saves first)", INK);
+        r.drawText(34, 236, "Z: keep exploring", INK);
+        r.drawText(34, 252, "X: back to the main menu (saves first)", INK);
     }
 
     private void renderHud(Renderer r) {
@@ -489,8 +662,10 @@ public class GameSession {
 
     private void renderPuzzle(Renderer r) {
         r.drawPanel(20, 12, 440, 182, PAPER, BORDER);
-        r.drawText(30, 30, "DEBUG: pick the fix", INK);
-        r.drawText(396, 30, "$" + activePuzzle.getReward(), MONEY_INK);
+        r.drawText(30, 30, activePuzzle.getHeading(), INK);
+        if (activePuzzle.getReward() > 0) {
+            r.drawText(396, 30, "$" + activePuzzle.getReward(), MONEY_INK);
+        }
 
         r.fillRect(30, 40, 420, 26, INK);
         r.drawText(40, 57, activePuzzle.getSnippet(), GOLD);

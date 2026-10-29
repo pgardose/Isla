@@ -26,15 +26,30 @@ class AppFlowEndingTest {
         return SeedData.items().stream().filter(i -> i.getName().equals(name)).findFirst().orElseThrow();
     }
 
-    /** Plays Elder Kai's two quests and leaves the game on the ending screen. */
+    /** Picks the right answer on the open puzzle screen and submits it. */
+    private void solve() {
+        GameSession s = f.getSession();
+        assertEquals(Screen.DEBUG_PUZZLE, s.getScreen());
+        while (s.getPuzzleCursor() != s.getActivePuzzle().getCorrectIndex()) {
+            f.handle(Action.DOWN);
+        }
+        f.handle(Action.CONFIRM);
+    }
+
+    /** Hands Elder Kai the three shards, names the culprit, mends the Idol: the game ends on the ending screen. */
     private void reachTheEnding() {
         GameSession s = f.getSession();
         s.getPlayer().setPosition(20, 10);
-        s.getPlayer().getInventory().addItem(item("Coconut"));
-        f.handle(Action.CONFIRM);
-        f.handle(Action.CONFIRM);
-        s.getPlayer().getInventory().addItem(item("Golden Idol"));
-        f.handle(Action.CONFIRM);
+        SeedData.SHARDS.keySet().forEach(s.getPlayer()::unlockArea);
+        f.handle(Action.CONFIRM); // the intro
+        f.handle(Action.CANCEL);
+        f.handle(Action.CONFIRM); // the shards
+        f.handle(Action.CANCEL);
+        f.handle(Action.CONFIRM); // who did it?
+        solve();
+        f.handle(Action.CANCEL);  // the confession
+        f.handle(Action.CONFIRM); // mend the Idol
+        solve();
         assertEquals(Screen.ENDING, s.getScreen());
     }
 
@@ -44,7 +59,7 @@ class AppFlowEndingTest {
         f.handle(Action.CANCEL);
         assertEquals(AppFlow.Mode.MENU, f.getMode());
         assertTrue(f.getMessage().contains("saved"), f.getMessage());
-        assertTrue(repos.quests().findById(3).orElseThrow().isCompleted());
+        assertTrue(repos.quests().findById(SeedData.MEND_IDOL_ID).orElseThrow().isCompleted());
     }
 
     @Test
@@ -93,7 +108,7 @@ class AppFlowEndingTest {
         menu.render(r);
         String all = String.join(" | ", r.texts);
         assertTrue(all.contains("Elder Kai"), all);
-        assertTrue(all.contains("coconut"), all);
+        assertTrue(all.contains("shards"), all);
         assertTrue(all.contains("Golden Idol"), all);
         assertTrue(all.contains("Q ..."), all);
     }

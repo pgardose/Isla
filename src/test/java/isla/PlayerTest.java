@@ -7,13 +7,13 @@ import org.junit.jupiter.api.Test;
 class PlayerTest {
 
     @Test
-    void tenSteps_drainOneStamina() {
+    void everyFourSteps_drainOneStamina() {
         Player p = new Player(1, "Pj", 50, 100, 3);
-        for (int i = 0; i < 9; i++) p.move(1, 0);
+        for (int i = 0; i < Player.STEPS_PER_STAMINA - 1; i++) p.move(1, 0);
         assertEquals(100, p.getStamina());
         p.move(1, 0);
         assertEquals(99, p.getStamina());
-        assertEquals(10, p.getX());
+        assertEquals(Player.STEPS_PER_STAMINA, p.getX());
     }
 
     @Test

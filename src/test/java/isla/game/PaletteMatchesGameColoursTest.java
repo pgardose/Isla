@@ -30,8 +30,8 @@ class PaletteMatchesGameColoursTest {
     void seededVendorsAndGiversUseDistinctSpriteKeys() {
         java.util.List<String> keys = new java.util.ArrayList<>();
         SeedData.vendors().forEach(v -> keys.add(v.getSprite()));
-        keys.add(SeedData.elder().getSprite());
-        keys.add(SeedData.coder().getSprite());
+        keys.add(Fixtures.elder().getSprite());
+        keys.add(Fixtures.coder().getSprite());
         assertEquals(keys.size(), new java.util.HashSet<>(keys).size(), "every NPC needs its own look: " + keys);
     }
 }

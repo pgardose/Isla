@@ -33,8 +33,8 @@ final class TestSessions {
 
     static GameWorld world(Player p) {
         List<NPC> npcs = new ArrayList<>(SeedData.vendors());
-        npcs.add(SeedData.elder());
-        npcs.add(SeedData.coder());
+        npcs.add(Fixtures.elder());
+        npcs.add(Fixtures.coder());
         return new GameWorld(TileMap.loadResource("/maps/island.txt"), p, npcs);
     }
 

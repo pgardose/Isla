@@ -107,7 +107,7 @@ class AppFlowTest {
         choose(f, AppFlow.MenuItem.HOW_TO_PLAY);
         RecordingRenderer r = new RecordingRenderer();
         f.render(r);
-        for (String expected : new String[] {"HOW TO PLAY", "Goal", "Arrow keys", "Z", "X", "Esc", "Inventory", "Rest", "F5"}) {
+        for (String expected : new String[] {"HOW TO PLAY", "Goal", "Arrow keys", "Z", "X", "Esc", "Inventory", "Rest", "F5", "journal"}) {
             assertTrue(r.anyTextContains(expected), "missing '" + expected + "' in " + r.texts);
         }
     }

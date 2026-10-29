@@ -59,7 +59,7 @@ class GameBootstrapTest {
         assertEquals(SeedData.SPAWN_Y, p.getY());
         assertEquals(0, p.getInventory().size());
         assertTrue(p.getUnlockedAreas().isEmpty());
-        assertEquals(5, s.getWorld().getNpcs().size());
+        assertEquals(14, s.getWorld().getNpcs().size());
         assertFalse(nia(s).getQuest().isCompleted());
         assertFalse(elder(s).getQuest().isCompleted());
         assertEquals(5, mara(s).getShop().quantityOf(item("Coconut Water")));
@@ -75,10 +75,10 @@ class GameBootstrapTest {
         s.handle(Action.DOWN);
         s.handle(Action.CONFIRM);
         s.handle(Action.CANCEL);
-        // hand the coconut to the elder
+        // hear Elder Kai out (he pays $20 for supplies)
         s.getPlayer().setPosition(20, 10);
         s.handle(Action.CONFIRM);
-        s.handle(Action.CONFIRM);
+        s.handle(Action.CANCEL);
         s.getPlayer().unlockArea("Jungle Path");
         s.getPlayer().setPosition(21, 13);
 
@@ -87,11 +87,11 @@ class GameBootstrapTest {
 
         GameSession loaded = GameBootstrap.start(repos, false);
         Player p = loaded.getPlayer();
-        assertEquals(50 - 10 - 8 + 25, p.getMoney());
+        assertEquals(50 - 10 - 8 + 20, p.getMoney());
         assertEquals(21, p.getX());
         assertEquals(13, p.getY());
         assertEquals(1, p.getInventory().countOf(item("Coconut Water")));
-        assertEquals(0, p.getInventory().countOf(item("Coconut")));
+        assertEquals(1, p.getInventory().countOf(item("Coconut")));
         assertTrue(p.hasUnlocked("Jungle Path"));
         assertEquals(4, mara(loaded).getShop().quantityOf(item("Coconut Water")));
         assertEquals(2, mara(loaded).getShop().quantityOf(item("Coconut")));
@@ -173,17 +173,30 @@ class GameBootstrapTest {
     }
 
     @Test
-    void saveFromBeforeMilestone4_gainsNiaOnContinue() {
-        // Storage that was seeded when only the Elder's quest existed.
+    void aSaveFromTheOldCoconutStory_cannotBeContinued_andStartsFresh() {
+        // Storage seeded by the game's first version: a player, the old quests, no story quests.
         for (Item item : SeedData.items()) repos.items().save(item);
         for (Vendor v : SeedData.vendors()) repos.vendors().save(v);
-        repos.quests().save(SeedData.elderQuest());
-        assertTrue(repos.quests().findById(2).isEmpty());
+        repos.quests().save(Fixtures.elderQuest());
+        Player old = new Player(SeedData.PLAYER_ID, "Old", 999, 100, 6);
+        old.setPosition(30, 7);
+        repos.players().save(old);
+        assertFalse(GameBootstrap.hasSave(repos), "Continue is greyed out for an old-version save");
 
         GameSession s = GameBootstrap.start(repos, false);
-        assertEquals(5, s.getWorld().getNpcs().size());
-        assertFalse(nia(s).getQuest().isCompleted());
-        assertTrue(repos.quests().findById(2).isPresent());
+        assertEquals(14, s.getWorld().getNpcs().size());
+        assertEquals(SeedData.NEW_GAME_MONEY, s.getPlayer().getMoney());
+        assertTrue(repos.quests().findById(SeedData.KAI_INTRO_ID).isPresent());
+    }
+
+    @Test
+    void aSaveMissingAQuestAddedLater_gainsItOnContinue() {
+        GameSession s = GameBootstrap.start(repos, true);
+        s.handle(Action.SAVE);
+        repos.quests().delete(SeedData.PIP_ID);
+        GameSession loaded = GameBootstrap.start(repos, false);
+        assertTrue(repos.quests().findById(SeedData.PIP_ID).isPresent());
+        assertEquals(14, loaded.getWorld().getNpcs().size());
     }
 
     @Test
@@ -276,7 +289,7 @@ class GameBootstrapTest {
         // The original single puzzle is still in the bank and is left alone on continue.
         for (Item item : SeedData.items()) repos.items().save(item);
         for (Vendor v : SeedData.vendors()) repos.vendors().save(v);
-        repos.quests().save(SeedData.elderQuest());
+        GameBootstrap.storyQuests().forEach(repos.quests()::save);
         repos.quests().save(SeedData.debugQuest());
         GameSession s = GameBootstrap.start(repos, false, new Random(1));
         assertEquals(SeedData.debugQuest().getSnippet(), snippetOf(s));
@@ -287,7 +300,7 @@ class GameBootstrapTest {
         GameSession s = GameBootstrap.start(repos, true, new Random(2));
         s.getPlayer().setPosition(24, 13);
         s.handle(Action.CONFIRM);
-        assertTrue(s.getDialogueText().contains("My code is broken"), s.getDialogueText());
+        assertTrue(s.getDialogueText().contains("practice bug"), s.getDialogueText());
         assertFalse(s.getDialogueText().contains("stamina"), s.getDialogueText());
     }
 }

@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import isla.NPC;
 import isla.QuestGiver;
 import isla.Vendor;
+import isla.dao.Repositories;
+import isla.game.GameBootstrap;
 import isla.game.SeedData;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -16,15 +18,35 @@ import org.junit.jupiter.api.Test;
 class IslandReachabilityTest {
 
     private final TileMap map = TileMap.loadResource("/maps/island.txt");
-    private final List<Vendor> vendors = SeedData.vendors();
-    private final QuestGiver elder = SeedData.elder();
-    private final QuestGiver coder = SeedData.coder();
+    /** Every NPC of the real story, as a new game places them. */
+    private final List<NPC> npcs = GameBootstrap.start(Repositories.inMemory(), true).getWorld().getNpcs();
 
     private List<NPC> allNpcs() {
-        List<NPC> all = new ArrayList<>(vendors);
-        all.add(elder);
-        all.add(coder);
-        return all;
+        return npcs;
+    }
+
+    private static final Set<String> JUNGLE = Set.of("Jungle Path");
+    private static final Set<String> EAST = Set.of("Jungle Path", "East Bridge");
+    private static final Set<String> SOUTH = Set.of("Jungle Path", "East Bridge", "South Bridge");
+    private static final Set<String> ALL = Set.of("Jungle Path", "East Bridge", "South Bridge", "Overgrowth Cleared");
+
+    /** The fewest story flags needed to reach each NPC: this is the order the story is played in. */
+    private Set<String> needed(NPC n) {
+        String who = n instanceof Vendor v ? v.getName() : n instanceof QuestGiver g ? "giver" + g.getNpcId() : "?";
+        return switch (who) {
+            case "Yara", "giver7" -> JUNGLE;                                  // Yara, Jungle Shrine stone
+            case "Ofa", "giver8", "giver5", "giver6", "giver12" -> EAST;      // the village
+            case "giver10" -> SOUTH;                                          // the vine stone
+            case "giver11" -> ALL;                                            // the temple altar
+            default -> Set.of();                                              // the home island
+        };
+    }
+
+    private Set<String> oneStepBefore(Set<String> flags) {
+        if (flags.equals(ALL)) return SOUTH;
+        if (flags.equals(SOUTH)) return EAST;
+        if (flags.equals(EAST)) return JUNGLE;
+        return Set.of();
     }
 
     private Set<Long> reachable(Set<String> unlocked) {
@@ -63,27 +85,26 @@ class IslandReachabilityTest {
         assertTrue(map.canWalk(SeedData.SPAWN_X, SeedData.SPAWN_Y, Set.of()));
         Set<Long> tiles = new HashSet<>();
         for (NPC n : allNpcs()) {
-            assertTrue(map.canWalk(n.getX(), n.getY(), Set.of("Jungle Path")), n + " stands on a blocked tile");
+            assertTrue(map.canWalk(n.getX(), n.getY(), ALL), n + " stands on a blocked tile");
             assertTrue(tiles.add(key(n.getX(), n.getY())), n + " shares a tile");
         }
         assertFalse(tiles.contains(key(SeedData.SPAWN_X, SeedData.SPAWN_Y)));
     }
 
     @Test
-    void spawn_reachesAllNpcsWithoutJungle_exceptJungleTrader() {
-        Set<Long> reach = reachable(Set.of());
-        for (Vendor v : vendors) {
-            boolean expected = !v.getName().equals("Yara");
-            assertEquals(expected, canInteractWith(v, reach), v.getName());
+    void everyNpc_isReachableExactlyWhenTheStorySaysSo() {
+        for (NPC n : allNpcs()) {
+            Set<String> flags = needed(n);
+            assertTrue(canInteractWith(n, reachable(flags)), n + " unreachable with " + flags);
+            if (!flags.isEmpty()) {
+                assertFalse(canInteractWith(n, reachable(oneStepBefore(flags))), n + " reachable too early");
+            }
         }
-        assertTrue(canInteractWith(elder, reach));
     }
 
     @Test
-    void jungleTrader_reachableOnlyAfterUnlock() {
-        Set<Long> reach = reachable(Set.of("Jungle Path"));
-        for (NPC n : allNpcs()) {
-            assertTrue(canInteractWith(n, reach), n + " unreachable even with Jungle Path");
-        }
+    void theStoryHasAllItsPeopleAndStones() {
+        assertEquals(4, allNpcs().stream().filter(n -> n instanceof Vendor).count());
+        assertEquals(10, allNpcs().stream().filter(n -> n instanceof QuestGiver).count());
     }
 }

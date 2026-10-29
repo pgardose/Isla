@@ -1,8 +1,16 @@
 package isla;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * A simple fetch quest: bring the named item to the quest giver and get paid.
  * A quest with no required item completes as soon as it is turned in.
+ *
+ * A quest can also grant story flags when it is completed (see {@link #grants(String...)}): the name of an
+ * area that opens ("East Bridge"), a shard that was found ("shard:sun") or a clue the player learned
+ * ("clue:signed"). Flags live in the player's unlocked-areas set, so they are saved with no extra tables.
  */
 public class Quest {
 
@@ -12,6 +20,7 @@ public class Quest {
     private final int reward;
     private final String requiredItemName;
     private boolean completed;
+    private final List<String> grantedFlags = new ArrayList<>();
 
     public Quest(int id, int giverNpcId, String description, int reward, String requiredItemName) {
         this.id = id;
@@ -40,6 +49,17 @@ public class Quest {
     /** Name of the item that must be handed over, or null if none is needed. */
     public String getRequiredItemName() {
         return requiredItemName;
+    }
+
+    /** Adds story flags this quest sets on the player when it is completed. Returns this, for chaining. */
+    public Quest grants(String... flags) {
+        Collections.addAll(grantedFlags, flags);
+        return this;
+    }
+
+    /** The flags completing this quest sets (read-only). */
+    public List<String> getGrantedFlags() {
+        return Collections.unmodifiableList(grantedFlags);
     }
 
     public boolean isCompleted() {
@@ -71,6 +91,7 @@ public class Quest {
                     .ifPresent(item -> player.getInventory().removeItem(item));
         }
         player.earn(reward);
+        grantedFlags.forEach(player::unlockArea);
         completed = true;
         return true;
     }
@@ -85,9 +106,17 @@ public class Quest {
             return InteractionResult.dialogue("Thanks again for your help!");
         }
         if (complete(player)) {
-            return InteractionResult.dialogue("You brought the " + requiredItemName
-                    + "! Here is $" + reward + " for your trouble.");
+            return InteractionResult.dialogue(completionText());
         }
         return InteractionResult.dialogue(giverDialogue + " (Quest: " + description + ")");
+    }
+
+    /** What is said when the quest is turned in; QuestGiver stages can replace it with their own line. */
+    public String completionText() {
+        String pay = reward > 0 ? " Here is $" + reward + " for your trouble." : "";
+        if (requiredItemName == null) {
+            return ("Thank you!" + pay).trim();
+        }
+        return "You brought the " + requiredItemName + "!" + pay;
     }
 }

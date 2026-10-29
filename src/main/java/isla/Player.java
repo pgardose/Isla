@@ -16,7 +16,7 @@ import java.util.Set;
 public class Player extends Entity {
 
     /** Walking this many tiles costs one stamina point. */
-    public static final int STEPS_PER_STAMINA = 10;
+    public static final int STEPS_PER_STAMINA = 4;
 
     private final int id;
     private final String name;

@@ -335,10 +335,7 @@ public class AppFlow {
         r.drawPanel(x, y, w, h, GameSession.PAPER, GameSession.BORDER);
     }
 
-    /** Like panel(), but the paper is slightly see-through ("#RRGGBBAA") so the title scene glows behind it. */
-    private void glassPanel(Renderer r, int x, int y, int w, int h) {
-        r.drawPanel(x, y, w, h, GameSession.PAPER + GLASS_ALPHA, GameSession.BORDER);
-    }
+
 
     /** Like panel(), but the paper is slightly see-through ("#RRGGBBAA") so the title scene glows behind it. */
     private void glassPanel(Renderer r, int x, int y, int w, int h) {
@@ -372,18 +369,18 @@ public class AppFlow {
     private void renderHelp(Renderer r) {
         panel(r, 30, 14, 420, 214);
         String[] lines = {
-            "HOW TO PLAY",
-            "Goal: help Elder Kai. A coconut first, then the Golden Idol",
-            "from Yara in the jungle. Press Q any time to see your quests.",
+            "HOW TO PLAY - The Broken Source",
+            "Goal: help Elder Kai mend Isla's broken Golden Idol.",
+            "Fix cursed code stones, find 3 shards, unmask the culprit.",
             "",
-            "Arrow keys or WASD ... walk",
-            "Z, Enter or Space ... talk, confirm, buy, use",
-            "X, Esc or Backspace ... cancel, or back to the menu",
-            "I ... Inventory          R ... Rest (+10 stamina)",
-            "Q ... Quest list         F5 ... Save your game",
+            "Arrow keys/WASD ... walk     Z/Enter ... talk, confirm",
+            "X/Esc ... cancel, back       I ... Inventory (use items)",
+            "Q ... journal: goal, shards, clues     F5 ... save",
+            "R ... Rest next to a hut (or when you collapse)",
             "",
-            "! marks a shop, ? marks someone who needs help.",
-            "Walking uses stamina: rest or eat to get it back.",
+            "! = shop   ? = someone (or a stone) needs you.",
+            "A wrong code fix shocks you: -10 stamina. Think first!",
+            "Walking drains stamina. Eat food or rest at huts.",
         };
         for (int i = 0; i < lines.length; i++) {
             r.drawText(46, 38 + i * 15, lines[i], GameSession.INK);

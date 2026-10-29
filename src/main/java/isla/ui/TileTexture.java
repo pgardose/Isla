@@ -39,6 +39,8 @@ final class TileTexture {
             case SAND -> sand(g, rng);
             case PATH -> path(g, rng);
             case JUNGLE -> jungle(g, rng);
+            case GLITCH -> glitch(g, new Rng(hash(col, row) ^ (waterFrameOf(frame) * 0x5BD1E995)));
+            case OVERGROWTH -> overgrowth(g, rng, waterFrameOf(frame));
             default -> grass(g, rng); // GRASS, and the ground under PALM and HUT
         }
         String[] rows = new String[SIZE];
@@ -101,6 +103,43 @@ final class TileTexture {
             g[y - 1][x + 1] = 'P';
             g[y - 1][x + 2] = 'P';
             g[y][x + 2] = 'g';
+        }
+    }
+
+    /** Corrupted data: dark tile with stray bars of gold, coral and foam that jump about between frames. */
+    private static void glitch(char[][] g, Rng rng) {
+        fill(g, 'D');
+        for (int i = 0; i < 5; i++) {
+            int y = rng.next(SIZE);
+            int x = rng.next(12);
+            int len = 2 + rng.next(5);
+            char c = "YCFO".charAt(rng.next(4));
+            for (int k = 0; k < len && x + k < SIZE; k++) {
+                g[y][x + k] = c;
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            g[rng.next(SIZE)][rng.next(SIZE)] = 'I';
+        }
+    }
+
+    /** Jungle that will not stop growing: dense dark leaves with coral thorns that pulse. */
+    private static void overgrowth(char[][] g, Rng rng, int frame) {
+        fill(g, 'J');
+        for (int i = 0; i < 5; i++) {
+            int x = rng.next(13);
+            int y = 1 + rng.next(14);
+            g[y][x] = 'P';
+            g[y - 1][x + 1] = 'P';
+            g[y][x + 2] = 'I';
+        }
+        for (int i = 0; i < 4; i++) {
+            int x = rng.next(15);
+            int y = rng.next(15);
+            g[y][x] = 'C';
+            if (frame == 1) {
+                g[y + 1][x + 1] = 'C';
+            }
         }
     }
 

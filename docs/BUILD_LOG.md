@@ -158,3 +158,21 @@ Built test-first; tests went from 210 to 243.
 2. **A new game never repeats the previous puzzle**, but a continued game keeps its puzzle so progress and question stay consistent.
 3. **Reward stays $40 for every puzzle** so earning stays predictable and the existing tests still hold.
 4. **Data location:** the project folder (when it has `pom.xml`, `isla-data`, `db.properties` or `settings.properties`), otherwise `~/.isla`.
+
+## 2026-10-29: The Broken Source (story campaign)
+
+What changed: a three-chapter mystery across all three islands (see `docs/superpowers/specs/2026-10-29-broken-source-design.md`).
+Five cursed code stones with story-specific bugs and an explanation for every wrong answer, four villagers, a fourth
+vendor (Ofa), a lantern, three shards, five clues, an accusation and a final puzzle. Glitch tiles on the map for the two
+bridges and the overgrowth. Objective strip, journal, paged dialogue. Stamina now matters (1 per 4 steps, wrong fixes
+cost 10, rest only at huts or on collapse).
+
+Test suite: the shipped suite did not compile: `StoryChainTest` and copies of `DaoContractTest`/`IslandReachabilityTest`
+in `src/test/java/isla/` belonged to an unfinished "lighthouse" story (duplicate class names, missing
+`GameSession.getJourney()`). They were removed. The old coconut Kai is kept as test-only `Fixtures` for engine tests.
+`EndingStoryTest` (the old ending) is replaced by `BrokenSourceStoryTest`, which plays the whole story by walking.
+354 tests pass.
+
+Verified: full suite on H2; a scripted walk-through from new game to ending (327 steps on the shortest route);
+screenshots rendered with the real JavaFX renderer (`docs/screenshots`). Not verified here: MySQL (same SQL, no schema
+change) and `mvn` itself (built with javac and the JUnit console because Maven Central was unreachable from the build machine).

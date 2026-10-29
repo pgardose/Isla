@@ -196,6 +196,106 @@ public final class Sprites {
         "................",
     };
 
+    // A cursed code stone: a dark tablet with glowing gold glyphs and a coral crack down the middle.
+    private static final String[] CODE_STONE = {
+        "................",
+        ".....IIIIII.....",
+        "....IDDDDDDI....",
+        "...IDDDDDDDDI...",
+        "...IDYYDCDYDI...",
+        "...IDDDDCDDDI...",
+        "...IDYDYDCYDI...",
+        "...IDDDDCDDDI...",
+        "...IDYYDDCYDI...",
+        "...IDDDDCDDDI...",
+        "...IDYDYCDYDI...",
+        "...IDDDDDCDDI...",
+        "..IIIIIIIIIIII..",
+        "..IssssssssssI..",
+        "..IIIIIIIIIIII..",
+        "................",
+    };
+
+    // Fisher Lio: wide straw fishing hat, ocean-blue vest, holding a little gold fish.
+    private static final String[] LIO = {
+        "................",
+        "......IIII......",
+        ".....IYYYYI.....",
+        "..IIIYYYYYYIII..",
+        ".IYYYYYYYYYYYYI.",
+        "..IIISSSSSSIII..",
+        "...ISISSSSISI...",
+        "...ISSSCCSSSI...",
+        "....ISSSSSSI....",
+        "..IOOOAAAAOOOI..",
+        "..IOOOAAAAOOOI..",
+        "..IOOOOOOOOOYYI.",
+        "..IOOOOOOOOYYYI.",
+        "...IWWWWWWWWII..",
+        "....IWWI.IWWI...",
+        "...IIII..IIII...",
+    };
+
+    // Grandma Ula: white bun, round cheeks, coral shawl over a sand-coloured dress, a little cane.
+    private static final String[] ULA = {
+        "......FFFF......",
+        ".....FFFFFF.....",
+        "....IFFFFFFI....",
+        "...IFFFFFFFFI...",
+        "...IFSSSSSSFI...",
+        "...ISISSSSISI...",
+        "...ISSCSSCSSI...",
+        "....ISSWWSSI....",
+        "..ICCCCCCCCCCI..",
+        "..ICCCYCCYCCCIW.",
+        "..IssSSSSSSssIW.",
+        "...IsSSSSSSsI.W.",
+        "...IsSSSSSSsI.W.",
+        "...IsSSSSSSsI.W.",
+        "....IIIIIIII..W.",
+        "....II....II....",
+    };
+
+    // Pip: a small kid with messy black hair and a bright gold shirt with a coral star.
+    private static final String[] PIP = {
+        "................",
+        "................",
+        "................",
+        ".....I.II.I.....",
+        "....IIIIIIII....",
+        "....IIIIIIII....",
+        "....ISSSSSSI....",
+        "....ISISSISI....",
+        "....ISSCCSSI....",
+        ".....ISSSSI.....",
+        "...IYYYYYYYYI...",
+        "..SIYYYCCYYYIS..",
+        "...IYYYYYYYYI...",
+        "....IOOOOOOI....",
+        "....ISSIISSI....",
+        "....III..III....",
+    };
+
+    // Ofa: village cook. Green head wrap, dark curls, white apron over a palm-green dress, a fish on a stick.
+    private static final String[] OFA = {
+        "................",
+        ".....GGGGGG.....",
+        "....GgGGGGgG....",
+        "...IGGGGGGGGI...",
+        "...IIWWWWWWII...",
+        "..IIWIWWWWIWII..",
+        "...IWWWCCWWWI...",
+        "....IWWWWWWI....",
+        "..IPPAAAAAAPPI..",
+        "..IPPAAAAAAPPIW.",
+        "..IPPAAYYAAPPIW.",
+        "..IPPAAAAAAPPIC.",
+        "..IPPPPPPPPPPICC",
+        "...IPPPPPPPPI.C.",
+        "....WW....WW....",
+        "...IIII..IIII...",
+    };
+
     // "!" marks a shop (gold bubble); "?" marks someone who needs help (coral bubble).
     private static final String[] EXCLAIM = {
         "................",
@@ -241,6 +341,11 @@ public final class Sprites {
         FRAMES.put("yara", List.<String[]>of(YARA));
         FRAMES.put("elder_kai", List.<String[]>of(ELDER_KAI));
         FRAMES.put("coder_nia", List.<String[]>of(CODER_NIA));
+        FRAMES.put("code_stone", List.<String[]>of(CODE_STONE));
+        FRAMES.put("lio", List.<String[]>of(LIO));
+        FRAMES.put("ula", List.<String[]>of(ULA));
+        FRAMES.put("pip", List.<String[]>of(PIP));
+        FRAMES.put("ofa", List.<String[]>of(OFA));
         FRAMES.put("palm", List.<String[]>of(PALM_TREE));
         FRAMES.put("hut", List.<String[]>of(HUT_HOUSE));
         FRAMES.put("exclaim", List.<String[]>of(EXCLAIM));
@@ -255,6 +360,11 @@ public final class Sprites {
         KEYS.put("trader_sprite", "yara");
         KEYS.put("elder_sprite", "elder_kai");
         KEYS.put("coder_sprite", "coder_nia");
+        KEYS.put("stone_sprite", "code_stone");
+        KEYS.put("lio_sprite", "lio");
+        KEYS.put("ula_sprite", "ula");
+        KEYS.put("pip_sprite", "pip");
+        KEYS.put("ofa_sprite", "ofa");
     }
 
     private Sprites() {

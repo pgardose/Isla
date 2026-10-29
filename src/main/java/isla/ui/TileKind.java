@@ -12,7 +12,11 @@ enum TileKind {
     PATH(Palette.PATH, null),
     PALM(Palette.PALM, "palm"),
     HUT(Palette.WOOD, "hut"),
-    JUNGLE(Palette.JUNGLE, null);
+    JUNGLE(Palette.JUNGLE, null),
+    /** A broken bridge: flickering corrupted code over the sea. */
+    GLITCH(Palette.SHADOW, null),
+    /** Cursed jungle that grows forever, tinged coral. */
+    OVERGROWTH(Palette.CORAL, null);
 
     private final String hex;
     private final String overlaySprite;
@@ -29,6 +33,11 @@ enum TileKind {
     /** Sprite drawn on top of the grass (palms and huts stand on grass); null for plain ground. */
     String overlaySprite() {
         return overlaySprite;
+    }
+
+    /** True for kinds whose texture changes over time (the sea and the cursed tiles). */
+    boolean isAnimated() {
+        return this == WATER || this == GLITCH || this == OVERGROWTH;
     }
 
     /** The kind for a tile colour, or null if the colour is not one we know. */

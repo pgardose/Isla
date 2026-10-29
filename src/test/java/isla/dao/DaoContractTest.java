@@ -8,6 +8,7 @@ import isla.Player;
 import isla.Quest;
 import isla.Tool;
 import isla.Vendor;
+import isla.game.Fixtures;
 import isla.game.SeedData;
 import java.util.List;
 import java.util.Optional;
@@ -156,7 +157,7 @@ abstract class DaoContractTest {
         for (Vendor v : SeedData.vendors()) {
             vendors.save(v);
         }
-        assertEquals(3, vendors.findAll().size());
+        assertEquals(SeedData.vendors().size(), vendors.findAll().size());
 
         Vendor tomas = vendors.findById(2).orElseThrow();
         Player rich = new Player(1, "Pj", 1000, 100, 6);
@@ -176,7 +177,7 @@ abstract class DaoContractTest {
 
     @Test
     void quest_completionAndFieldsRoundTrip() {
-        Quest q = SeedData.elderQuest();
+        Quest q = Fixtures.elderQuest();
         quests.save(q);
         Quest loaded = quests.findById(1).orElseThrow();
         assertFalse(loaded.isCompleted());
@@ -232,7 +233,7 @@ abstract class DaoContractTest {
 
     @Test
     void fetchAndDebugQuests_coexist_eachWithItsOwnType() {
-        quests.save(SeedData.elderQuest());
+        quests.save(Fixtures.elderQuest());
         quests.save(SeedData.debugQuest());
         List<Quest> all = quests.findAll();
         assertEquals(List.of(1, 2), all.stream().map(Quest::getId).toList());
