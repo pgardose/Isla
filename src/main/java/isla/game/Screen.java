@@ -8,5 +8,7 @@ public enum Screen {
     INVENTORY,
     DEBUG_PUZZLE,
     QUESTS,
-    ENDING
+    ENDING,
+    /** The hero died of exhaustion; AppFlow offers the last save or the main menu. */
+    GAME_OVER
 }

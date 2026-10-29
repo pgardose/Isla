@@ -119,7 +119,7 @@ public class AppFlow {
 
     /** Called when the window closes: keeps progress if autosave is on. */
     public void onWindowClose() {
-        if (mode == Mode.PLAYING && settings.isAutosave()) {
+        if (mode == Mode.PLAYING && settings.isAutosave() && !session.isDead()) {
             try {
                 GameBootstrap.save(repos, session);
             } catch (RuntimeException e) {
@@ -254,6 +254,16 @@ public class AppFlow {
     }
 
     private void handlePlaying(Action action) {
+        if (session.isDead()) {
+            if (action == Action.CONFIRM) {
+                wakeUpAfterDeath();
+            } else if (action == Action.CANCEL) {
+                session = null; // never save a dead game
+                enterMenu();
+                message = "You died. Your last save is kept.";
+            }
+            return;
+        }
         // Cancel only leaves when nothing is open (or on the ending screen, whose "main menu" choice is Cancel);
         // inside a shop, dialogue or the quest list it closes that first.
         boolean canLeave = session.getScreen() == Screen.EXPLORING || session.getScreen() == Screen.ENDING;
@@ -282,8 +292,18 @@ public class AppFlow {
         message = result;
     }
 
+    /** Back to the last save (or a new game if there is none), with full stamina so you cannot die again at once. */
+    private void wakeUpAfterDeath() {
+        boolean saved = GameBootstrap.hasSave(repos);
+        startPlaying(!saved);
+        session.getPlayer().restoreStamina(session.getPlayer().getMaxStamina());
+        session.notice(saved ? "You wake up where you last saved, fully rested."
+                : "You had not saved yet, so your story starts over.");
+    }
+
     private void startPlaying(boolean newGame) {
         session = GameBootstrap.start(repos, newGame);
+        session.setCheckpoints(settings.isAutosave());
         if (!notice.isEmpty()) {
             session.notice(notice);
         }
@@ -376,11 +396,11 @@ public class AppFlow {
             "Arrow keys/WASD ... walk     Z/Enter ... talk, confirm",
             "X/Esc ... cancel, back       I ... Inventory (use items)",
             "Q ... journal: goal, shards, clues     F5 ... save",
-            "R ... Rest next to a hut (or when you collapse)",
+            "R ... Rest at a hut ($10). At 0 stamina you die!",
             "",
             "! = shop   ? = someone (or a stone) needs you.",
             "A wrong code fix shocks you: -10 stamina. Think first!",
-            "Walking drains stamina. Eat food or rest at huts.",
+            "Story steps save automatically (with autosave on).",
         };
         for (int i = 0; i < lines.length; i++) {
             r.drawText(46, 38 + i * 15, lines[i], GameSession.INK);

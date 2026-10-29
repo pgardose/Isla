@@ -96,15 +96,23 @@ class BrokenSourceStoryTest {
             int dy = c[1] - s.getPlayer().getY();
             Action a = dx == 1 ? Action.RIGHT : dx == -1 ? Action.LEFT : dy == 1 ? Action.DOWN : Action.UP;
             s.handle(a);
-            if (s.getPlayer().getX() != c[0] || s.getPlayer().getY() != c[1]) {
-                // too tired: eat something if we have it, else collapse and rest, then try again
-                assertTrue(s.getPlayer().isExhausted(), "blocked at " + c[0] + "," + c[1]);
-                s.handle(Action.REST);
-                s.handle(a);
+            assertFalse(s.isDead(), "died of exhaustion at " + c[0] + "," + c[1]);
+            if (s.getPlayer().getStamina() <= GameSession.LOW_STAMINA) {
+                eatSomething(); // what a sensible player does when the bar turns red
             }
             steps++;
             assertEquals(c[0], s.getPlayer().getX());
             assertEquals(c[1], s.getPlayer().getY());
+        }
+    }
+
+    private void eatSomething() {
+        for (Item food : List.copyOf(s.getPlayer().getInventory().getItems())) {
+            if (food instanceof isla.Consumable) {
+                s.getPlayer().restoreStamina(((isla.Consumable) food).getStaminaRestore());
+                s.getPlayer().getInventory().removeItem(food);
+                return;
+            }
         }
     }
 
@@ -318,6 +326,21 @@ class BrokenSourceStoryTest {
         assertTrue(s.getMessage().contains("Glitch shock"), s.getMessage());
         assertEquals(p.feedbackFor(wrong), s.getMessage().substring(0, p.feedbackFor(wrong).length()));
         assertFalse(s.getPlayer().hasUnlocked(SeedData.EAST_BRIDGE));
+    }
+
+    @Test
+    void aWrongFix_whenNearlyExhausted_kills() {
+        s.getPlayer().unlockArea(SeedData.JUNGLE_PATH);
+        s.getPlayer().setPosition(28, 6);
+        s.getPlayer().expendStamina(SeedData.MAX_STAMINA - 5);
+        s.handle(Action.CONFIRM);
+        DebugQuest p = s.getActivePuzzle();
+        while (s.getPuzzleCursor() == p.getCorrectIndex()) {
+            s.handle(Action.DOWN);
+        }
+        s.handle(Action.CONFIRM);
+        assertEquals(Screen.GAME_OVER, s.getScreen());
+        assertTrue(s.getDeathCause().contains("shock"), s.getDeathCause());
     }
 
     @Test

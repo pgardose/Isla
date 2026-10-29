@@ -1,6 +1,6 @@
 # Isla: A 2D Island Trading Adventure
 
-Java OOP course project (UIC, College of Computer Studies): a GBA-style top-down island game.
+Java OOP course project (UIC, College of Computing College): a GBA-style top-down island game.
 Walk around a tile-based island, buy items from vendors on a limited budget, manage a capacity-limited
 inventory, help the islanders with quests and debug broken code to earn money. Progress is saved to a built-in
 database (no setup), or to MySQL if you prefer.
@@ -29,6 +29,10 @@ clues, a culprit to unmask and an ending. Still open from milestone 5: the Figma
 | Journal (Q) | Who broke the Idol? | Main menu |
 |---|---|---|
 | ![Journal](docs/screenshots/shot_journal.png) | ![Accusation](docs/screenshots/shot_accusation.png) | ![Main menu](docs/screenshots/shot_menu.png) |
+
+| You died (stamina hit 0) |
+|---|
+| ![Game over](docs/screenshots/shot_game_over.png) |
 
 ## Run it
 
@@ -91,11 +95,12 @@ mvn test -Disla.test.jdbcUrl=jdbc:mysql://localhost:3306/isla_test \
 | Z / Enter / Space | Talk (and turn the page of long dialogue), confirm, buy, use, submit a puzzle answer |
 | X / Esc / Backspace | Cancel, leave |
 | I | Inventory (Left/Right switches tabs) |
-| R | Rest: next to a hut you wake fully rested; in the open only once you collapse (+25) |
+| R | Rest next to a hut: $10 for full stamina. Nothing happens in the open, and at 0 stamina you die |
 | Q | Journal: chapter, goal, shards, clues and side goals (Q, X or Z closes it) |
 | F5 | Save |
 | X / Esc (while walking) | Leave the island back to the main menu (saves first if autosave is on) |
 | Z / X (on the ending screen) | Z keeps exploring, X goes back to the main menu (saves first if autosave is on) |
+| Z / X (on the YOU DIED screen) | Z wakes you at your last save, fully rested; X goes to the main menu without saving |
 
 ## The story: The Broken Source
 
@@ -127,9 +132,13 @@ mentions she's wearing her *spare* glasses).
   glitched bridge tiles turn into path and cursed jungle withers into grass, right there on the map.
 - **Some stones and people are locked** until the story says so: the South Bridge stone needs the password, the
   Overgrowth stone needs a lit lantern, the villagers loop until their stone is fixed. They tell you what they need.
-- **Stamina:** walking costs 1 stamina per 4 steps (the whole story is over 300 steps on the shortest route). Food
-  restores it. **R** only rests next to a hut (full stamina); out in the open you can only rest once you collapse
-  at 0 (+25). You can never get stuck.
+- **Stamina, and dying:** walking costs 1 stamina per 4 steps (the whole story is over 300 steps on the shortest
+  route) and a wrong code fix costs 10. Food restores it, and **R** next to a hut buys a nap for **$10** (full stamina); there is no
+  resting in the open, so pressing R does nothing out there. At **20 or less** the bar turns red and you're warned that you feel faint. At **0 you die**:
+  the *YOU DIED* screen offers **Z** (wake up at your last save, fully rested, so you can never die in a loop) or
+  **X** (main menu; the dead game is never saved).
+- **Checkpoints:** with *Autosave* on, the game also saves by itself every time you finish a story step (fixing a
+  stone, a villager's quest, Kai's chapters), so dying never costs much. F5 still saves at any time.
 - **Money and shops:** start with $50 and 6 slots. **Mara** (fruit), **Tomas** (Rusty Machete $30, Seashell Necklace $15,
   Carved Tiki $25), **Yara** in the jungle (Stamina Tonic $25, Carved Tiki) and **Ofa** in the village (Grilled Fish $12,
   Lantern $35, Seashell Necklace). Stones and quests pay a little. Buying is blocked without enough money or with a full
@@ -285,6 +294,9 @@ stateDiagram-v2
   DEBUG_PUZZLE --> EXPLORING: X
   QUESTS --> EXPLORING: Q / X / Z
   DEBUG_PUZZLE --> ENDING: Elder Kai's last puzzle solved: the Idol is mended (once)
+  EXPLORING --> GAME_OVER: stamina reaches 0 while walking
+  DEBUG_PUZZLE --> GAME_OVER: a wrong fix's shock takes the last stamina
+  GAME_OVER --> [*]: Z (AppFlow loads the last save, full stamina) or X (main menu, nothing saved)
   ENDING --> EXPLORING: Z (keep exploring)
   ENDING --> [*]: X (AppFlow saves and shows the main menu)
 ```
@@ -382,7 +394,7 @@ tests (`DaoContractTest`).
 
 ## Testing
 
-`mvn test` runs **354 JUnit 5 tests**. They cover:
+`mvn test` runs **364 JUnit 5 tests**. They cover:
 
 - the model rules (buying, inventory limits, stamina, quests, the story chain and ending, the puzzle's right and wrong answers);
 - every game screen and the menu flow through plain `Action` inputs, using a recording renderer instead of a window;

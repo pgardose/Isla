@@ -56,8 +56,11 @@ public class GameSession {
     private static final int WRAP_CHARS = 76;
     /** Lines in one page of the dialogue box. */
     static final int PAGE_LINES = 3;
-    /** Stamina back when the player collapses away from a hut (resting by a hut restores it all). */
-    static final int REST_AMOUNT = 25;
+    /** At or below this the stamina bar turns red and the hero feels faint. At 0 they die. */
+    public static final int LOW_STAMINA = 20;
+    static final String DANGER = "#E8664A";     // Palette.CORAL
+    /** What a nap in a villager's hut costs: rest is never free, so stamina and money both matter. */
+    public static final int HUT_NAP_PRICE = 10;
 
     private final GameWorld world;
     private Screen screen = Screen.EXPLORING;
@@ -66,6 +69,9 @@ public class GameSession {
     private int dialoguePage;
     private Journey journey;
     private QuestGiver activeGiver;
+    private String deathCause = "";
+    private boolean faintWarned;
+    private boolean checkpoints;
     private Shop activeShop;
     private int shopCursor;
     private DebugQuest activePuzzle;
@@ -95,6 +101,21 @@ public class GameSession {
     /** How many pages the current dialogue has. */
     public int dialoguePageCount() {
         return Math.max(1, (wrap(dialogueText, WRAP_CHARS).size() + PAGE_LINES - 1) / PAGE_LINES);
+    }
+
+    /** True once the hero has died (the GAME_OVER screen); a dead game must never be saved. */
+    public boolean isDead() {
+        return screen == Screen.GAME_OVER;
+    }
+
+    /** How the hero died, for the game-over screen ("" while alive). */
+    public String getDeathCause() {
+        return deathCause;
+    }
+
+    /** When on, the game saves by itself each time a story step is completed (AppFlow turns this on). */
+    public void setCheckpoints(boolean on) {
+        this.checkpoints = on;
     }
 
     public GameWorld getWorld() {
@@ -260,6 +281,7 @@ public class GameSession {
             case DEBUG_PUZZLE -> handlePuzzle(action);
             case QUESTS -> handleQuestList(action);
             case ENDING -> handleEnding(action);
+            case GAME_OVER -> { } // AppFlow decides: last save or main menu
         }
     }
 
@@ -284,6 +306,39 @@ public class GameSession {
         if (world.movePlayer(dx, dy) == MoveResult.TOO_TIRED) {
             message = "You are too tired to move. Press R to rest or use a consumable.";
         }
+        checkStamina("Your legs gave out far from food and shade. You collapsed from exhaustion and never woke up.");
+    }
+
+    /** Dies at 0 stamina; warns once each time stamina drops into the danger zone. */
+    private void checkStamina(String causeIfDead) {
+        Player p = getPlayer();
+        if (p.getStamina() <= 0) {
+            deathCause = causeIfDead;
+            activePuzzle = null;
+            activeShop = null;
+            screen = Screen.GAME_OVER;
+            return;
+        }
+        if (p.getStamina() <= LOW_STAMINA) {
+            if (!faintWarned && message.isEmpty()) {
+                message = "You feel faint... Eat something (I) or rest next to a hut (R), or you will die!";
+            }
+            faintWarned = true;
+        } else {
+            faintWarned = false;
+        }
+    }
+
+    /** Saves by itself after a story step, if checkpoints are on. Never shows an error over the story text. */
+    private void checkpoint() {
+        if (!checkpoints) {
+            return;
+        }
+        try {
+            saveHandler.get();
+        } catch (RuntimeException e) {
+            System.err.println("Checkpoint save failed: " + e.getMessage());
+        }
     }
 
     private void interact() {
@@ -291,10 +346,14 @@ public class GameSession {
         if (npc == null) {
             return;
         }
+        Quest before = npc instanceof QuestGiver qg ? qg.currentStage().map(QuestGiver.Stage::quest).orElse(null) : null;
         InteractionResult result = npc.interact(getPlayer());
         dialogueText = result.getText();
         dialoguePage = 0;
         activeGiver = npc instanceof QuestGiver g ? g : null;
+        if (before != null && before.isCompleted()) {
+            checkpoint(); // a story step was just completed by talking
+        }
         switch (result.getKind()) {
             case SHOP -> {
                 activeShop = result.getShop();
@@ -415,11 +474,16 @@ public class GameSession {
             boolean ending = activeGiver != null && activeGiver.isFinale() && activeGiver.isFinished();
             closePuzzle();
             screen = ending ? Screen.ENDING : Screen.DIALOGUE;
+            checkpoint();
         } else {
             int cost = Math.min(puzzle.wrongAnswerStaminaCost(), p.getStamina());
             p.expendStamina(cost);
             message = puzzle.feedbackFor(puzzleCursor)
                     + (cost > 0 ? " Glitch shock! -" + cost + " stamina." : "");
+            if (cost > 0) {
+                faintWarned = true; // the shock message already says enough
+                checkStamina("The cursed stone's glitch shock was too much for your exhausted body.");
+            }
         }
     }
 
@@ -441,9 +505,8 @@ public class GameSession {
     // ---- rest ----
 
     /**
-     * Resting needs shade: next to a hut you sleep and wake fully rested. Out in the open you can only rest once
-     * you are completely exhausted (you collapse and get a little back), so walking far without food matters,
-     * but you can never get stuck.
+     * Resting needs a hut: for $10 the owner lets you sleep and you wake fully rested. Out in the open there is no
+     * rest at all, so walking far without food or money is dangerous: at 0 stamina the hero dies.
      */
     private void rest() {
         Player p = getPlayer();
@@ -452,11 +515,12 @@ public class GameSession {
                 message = "You are already well rested.";
                 return;
             }
+            if (!p.spend(HUT_NAP_PRICE)) {
+                message = "The hut owner wants $" + HUT_NAP_PRICE + " for a nap. You can't pay. Find food!";
+                return;
+            }
             p.restoreStamina(p.getMaxStamina());
-            message = "You nap in the shade of the hut. Stamina fully restored!";
-        } else if (p.isExhausted()) {
-            p.restoreStamina(REST_AMOUNT);
-            message = "You collapse on the ground and sleep it off (+" + REST_AMOUNT + "). A hut would be comfier.";
+            message = "You pay $" + HUT_NAP_PRICE + " and nap in the hut. Stamina fully restored!";
         } else if (p.getStamina() >= p.getMaxStamina()) {
             message = "You are not tired.";
         } else {
@@ -539,7 +603,22 @@ public class GameSession {
             case DEBUG_PUZZLE -> renderPuzzle(r);
             case QUESTS -> renderQuestList(r);
             case ENDING -> renderEnding(r);
+            case GAME_OVER -> renderGameOver(r);
         }
+    }
+
+    private void renderGameOver(Renderer r) {
+        r.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, HUD_FILL);
+        r.drawPanel(40, 40, 400, 192, PAPER, DANGER);
+        r.drawText(204, 70, "YOU DIED", DANGER);
+        List<String> cause = wrap(deathCause, 60);
+        for (int i = 0; i < cause.size(); i++) {
+            r.drawText(56, 98 + i * 14, cause.get(i), INK);
+        }
+        r.drawText(56, 150, "Tip: eat food (I), or pay $" + HUT_NAP_PRICE + " to rest at a hut (R).", BORDER);
+        r.drawText(56, 164, "The bar turns red at " + LOW_STAMINA + " stamina or less: act fast.", BORDER);
+        r.drawText(56, 196, "Z: wake up at your last save, fully rested", INK);
+        r.drawText(56, 214, "X: back to the main menu", INK);
     }
 
     private void renderDialoguePage(Renderer r) {
@@ -634,7 +713,7 @@ public class GameSession {
         r.drawText(10, 29, "STA " + p.getStamina() + "/" + p.getMaxStamina(), HUD_TEXT);
         r.fillRect(10, 34, 108, 8, BAR_BACK);
         int filled = p.getMaxStamina() == 0 ? 0 : 108 * p.getStamina() / p.getMaxStamina();
-        r.fillRect(10, 34, filled, 8, BAR_FILL);
+        r.fillRect(10, 34, filled, 8, p.getStamina() <= LOW_STAMINA ? DANGER : BAR_FILL);
     }
 
     private void renderShop(Renderer r) {
@@ -665,6 +744,10 @@ public class GameSession {
         r.drawText(30, 30, activePuzzle.getHeading(), INK);
         if (activePuzzle.getReward() > 0) {
             r.drawText(396, 30, "$" + activePuzzle.getReward(), MONEY_INK);
+        }
+        Player p = getPlayer();
+        if (activePuzzle.wrongAnswerStaminaCost() > 0) {
+            r.drawText(300, 30, "STA " + p.getStamina(), p.getStamina() <= LOW_STAMINA ? DANGER : MONEY_INK);
         }
 
         r.fillRect(30, 40, 420, 26, INK);

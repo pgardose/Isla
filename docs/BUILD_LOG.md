@@ -176,3 +176,16 @@ in `src/test/java/isla/` belonged to an unfinished "lighthouse" story (duplicate
 Verified: full suite on H2; a scripted walk-through from new game to ending (327 steps on the shortest route);
 screenshots rendered with the real JavaFX renderer (`docs/screenshots`). Not verified here: MySQL (same SQL, no schema
 change) and `mvn` itself (built with javac and the JUnit console because Maven Central was unreachable from the build machine).
+
+## 2026-10-29: Death by exhaustion
+
+At 0 stamina (from walking or a wrong fix's glitch shock) the hero dies: new `Screen.GAME_OVER`. Z wakes the player
+at the last save with full stamina (so a save made while low can never cause a death loop), or starts over if there
+is no save; X returns to the menu. A dead game is never saved (F5, leaving and closing the window all skip it).
+Stamina at 20 or less turns the bar red with a one-time "you feel faint" warning. The open-field "collapse" rest is
+gone (resting only next to huts). With autosave on, every completed story step saves a checkpoint. 364 tests pass.
+
+## 2026-10-29: Rest is no longer free
+
+A nap at a hut now costs $10 (refused without the money); pressing R anywhere else does nothing. Stamina and money
+now pull against each other: food or a paid nap, or you die. 366 tests pass.

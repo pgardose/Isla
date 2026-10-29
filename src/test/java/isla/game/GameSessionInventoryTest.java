@@ -120,28 +120,45 @@ class GameSessionInventoryTest {
     }
 
     @Test
-    void rest_restoresStaminaCapped() {
+    void rest_nextToAHut_costsMoney_andRestoresStaminaFully() {
         GameSession s = TestSessions.at(21, 8); // next to the hut above Elder Kai
         s.getPlayer().expendStamina(60);
         s.handle(Action.REST);
         assertEquals(100, s.getPlayer().getStamina());
+        assertEquals(SeedData.NEW_GAME_MONEY - GameSession.HUT_NAP_PRICE, s.getPlayer().getMoney());
         assertTrue(s.getMessage().contains("hut"), s.getMessage());
         s.handle(Action.REST);
         assertEquals("You are already well rested.", s.getMessage());
+        assertEquals(SeedData.NEW_GAME_MONEY - GameSession.HUT_NAP_PRICE, s.getPlayer().getMoney(), "no charge");
     }
 
     @Test
-    void rest_outInTheOpen_onlyWorksOnceYouCollapse() {
+    void rest_atAHut_withoutMoney_isRefused() {
+        GameSession s = TestSessions.at(21, 8);
+        s.getPlayer().spend(s.getPlayer().getMoney());
+        s.getPlayer().expendStamina(60);
+        s.handle(Action.REST);
+        assertEquals(40, s.getPlayer().getStamina());
+        assertTrue(s.getMessage().contains("can't pay"), s.getMessage());
+    }
+
+    @Test
+    void pressingRestOverAndOver_inTheOpen_neverGivesStaminaBack() {
+        GameSession s = TestSessions.fresh();
+        s.getPlayer().expendStamina(90);
+        for (int i = 0; i < 50; i++) {
+            s.handle(Action.REST);
+        }
+        assertEquals(10, s.getPlayer().getStamina());
+    }
+
+    @Test
+    void rest_outInTheOpen_isNotPossible() {
         GameSession s = TestSessions.fresh(); // spawn: open grass, no hut
         s.getPlayer().expendStamina(50);
         s.handle(Action.REST);
         assertEquals(50, s.getPlayer().getStamina(), "no free naps in the open");
         assertTrue(s.getMessage().contains("No shade"), s.getMessage());
-        s.handle(Action.REST);
-        s.getPlayer().expendStamina(50);
-        s.handle(Action.REST);
-        assertEquals(GameSession.REST_AMOUNT, s.getPlayer().getStamina());
-        assertTrue(s.getMessage().contains("collapse"), s.getMessage());
     }
 
     @Test
@@ -152,14 +169,18 @@ class GameSessionInventoryTest {
     }
 
     @Test
-    void rest_letsExhaustedPlayerWalkAgain() {
+    void eating_whenFaint_keepsYouAlive() {
         GameSession s = TestSessions.fresh();
-        s.getPlayer().expendStamina(100);
-        s.handle(Action.RIGHT);
-        assertEquals(SeedData.SPAWN_X, s.getPlayer().getX());
-        s.handle(Action.REST);
-        s.handle(Action.RIGHT);
-        assertEquals(SeedData.SPAWN_X + 1, s.getPlayer().getX());
+        s.getPlayer().getInventory().addItem(SeedData.items().get(0)); // Coconut Water, +20
+        s.getPlayer().expendStamina(99);
+        s.handle(Action.INVENTORY);
+        s.handle(Action.CONFIRM);
+        s.handle(Action.CANCEL);
+        assertEquals(21, s.getPlayer().getStamina());
+        for (int i = 0; i < 40; i++) {
+            s.handle(i % 2 == 0 ? Action.RIGHT : Action.LEFT);
+        }
+        assertFalse(s.isDead());
     }
 
     @Test
