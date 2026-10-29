@@ -327,112 +327,59 @@ stateDiagram-v2
 
 The `PLAYING` state above is itself a small state machine: `Screen` decides how each key is read and what is drawn.
 Z, X and Q below are the actions Confirm, Cancel and Quests.
-
 ```mermaid
-sequenceDiagram
-  autonumber
-  participant P@{ "type": "actor" } as Player
-participant S@{ "type": "control" } as Game Session
-participant Q@{ "type": "boundary" } as QuestGiver
-participant V@{ "type": "boundary" } as Vendor
-participant D@{ "type": "entity" } as DebugQuest
-participant A@{ "type": "control" } as AppFlow
-Note over S: Screen = EXPLORING
-alt Z next to a quest giver
-P->>S: press Z
-S->>Q: interact(player)
-Q-->>S: InteractionResult.dialogue
-Note over S: Screen = DIALOGUE
-P->>S: Z / X
-Note over S: Screen = EXPLORING
-else Z next to a vendor
-P->>S: press Z
-S->>V: interact(player)
-V-->>S: InteractionResult.shop
-Note over S: Screen = SHOP
-P->>S: X
-Note over S: Screen = EXPLORING
-else I (inventory)
-P->>S: press I
-Note over S: Screen = INVENTORY
-P->>S: X / I
-Note over S: Screen = EXPLORING
-else Q (quests)
-P->>S: press Q
-Note over S: Screen = QUESTS
-P->>S: Q / X / Z
-Note over S: Screen = EXPLORING
-else Z next to Coder Nia
-P->>S: press Z
-S->>D: interact(player)
-D-->>S: InteractionResult.puzzle
-Note over S: Screen = DEBUG_PUZZLE
-alt X (leave)
-P->>S: X
-Note over S: Screen = EXPLORING
-else Right answer
-P->>S: choose fix
-S->>D: answer(player, choice)
-D-->>S: true (reward paid)
-Note over S: Screen = DIALOGUE
-else Last puzzle solved (Idol mended, once)
-Note over S: Screen = ENDING
-alt Z (keep exploring)
-P->>S: Z
-Note over S: Screen = EXPLORING
-else X (main menu)
-P->>S: X
-S->>A: save and show main menu
-end
-else Wrong fix, shock takes last stamina
-S->>D: answer(player, choice)
-D-->>S: false
-Note over S: Screen = GAME_OVER
-end
-else Stamina reaches 0 while walking
-Note over S: Screen = GAME_OVER
-end
-opt Screen = GAME_OVER
-alt Z
-P->>S: Z
-S->>A: load last save (full stamina)
-else X
-P->>S: X
-S->>A: main menu (nothing saved)
-end
-end
-```
+stateDiagram-v2
+  [*] --> EXPLORING
+  EXPLORING --> DIALOGUE: Z next to a quest giver (talk, hand in an item)
+  EXPLORING --> SHOP: Z next to a vendor
+  EXPLORING --> DEBUG_PUZZLE: Z next to Coder Nia
+  EXPLORING --> INVENTORY: I
+  EXPLORING --> QUESTS: Q
+  DIALOGUE --> EXPLORING: Z / X
+  SHOP --> EXPLORING: X
+  INVENTORY --> EXPLORING: X / I
+  DEBUG_PUZZLE --> DIALOGUE: right answer (reward paid)
+  DEBUG_PUZZLE --> EXPLORING: X
+  QUESTS --> EXPLORING: Q / X / Z
+  DEBUG_PUZZLE --> ENDING: Elder Kai's last puzzle solved: the Idol is mended (once)
+  EXPLORING --> GAME_OVER: stamina reaches 0 while walking
+  DEBUG_PUZZLE --> GAME_OVER: a wrong fix's shock takes the last stamina
+  GAME_OVER --> [*]: Z (AppFlow loads the last save, full stamina) or X (main menu, nothing saved)
+  ENDING --> EXPLORING: Z (keep exploring)
+  ENDING --> [*]: X (AppFlow saves and shows the main menu)
+``` 
 
 ### Sequence diagram: fixing a cursed code stone
 
 ```mermaid
 sequenceDiagram
-  participant S as GameSession
-  participant G as QuestGiver (the Jungle Shrine stone)
-  participant Q as DebugQuest (shrine puzzle)
-  participant P as Player
-  participant W as GameWorld / TileMap
-  S->>G: interact(player)
-  G->>G: currentStage() open? requiresFlag held?
-  alt locked (e.g. the South stone without the password)
-    G-->>S: InteractionResult.dialogue(lockedText)
-  else open
-    G->>Q: interact(player, dialogue)
-    Q-->>S: InteractionResult.puzzle(intro, puzzle)
-    Note over S: Screen = DEBUG_PUZZLE
-    S->>Q: answer(player, choice)
-    alt wrong
-      Q-->>S: false
-      S->>P: expendStamina(wrongAnswerStaminaCost())
-      Note over S: message = feedbackFor(choice) + "Glitch shock!"
-    else right
-      Q->>P: earn(reward), unlockArea("East Bridge", "shard:sun", "clue:signed")
-      Q-->>S: true
-      S->>G: doneTextFor(puzzle)
-      Note over S: Screen = DIALOGUE (or ENDING for Kai's last quest)
-      Note over W: bridge tiles are now walkable and drawn as path
-    end
-  end
+  autonumber
+  participant S@{ "type": "control" } as Game Session
+participant G@{ "type": "boundary" } as QuestGiver (Jungle Shrine stone)
+participant Q@{ "type": "entity" } as DebugQuest (shrine puzzle)
+participant P@{ "type": "actor" } as Player
+participant W@{ "type": "entity" } as GameWorld / TileMap
+S->>G: interact(player)
+G->>G: currentStage() open? requiresFlag held?
+alt Locked (e.g. South stone without the password)
+G-->>S: InteractionResult.dialogue(lockedText)
+else Open
+G->>Q: interact(player, dialogue)
+Q-->>S: InteractionResult.puzzle(intro, puzzle)
+Note over S: Screen = DEBUG_PUZZLE
+S->>Q: answer(player, choice)
+alt Wrong
+Q-->>S: false
+S->>P: expendStamina(wrongAnswerStaminaCost())
+Note over S: message = feedbackFor(choice) + "Glitch shock!"
+else Right
+Q->>P: earn(reward), unlockArea("East Bridge", "shard:sun", "clue:signed")
+Q-->>S: true
+S->>G: doneTextFor(puzzle)
+Note over S: Screen = DIALOGUE (or ENDING for Kai's last quest)
+Note over W: bridge tiles are now walkable and drawn as path
+end
+end
 ```
 
 ### Sequence diagram: player buys an item
